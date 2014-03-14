@@ -33,6 +33,8 @@ public:
      *  clientAddr: address of the client. This variable is only valid for new connections
      *  handle: handle for this connection
      *  pUser: pointer passed in during registration 
+     *  retval: true Connection should be accepted
+     *  retval: false Connection should be rejected
      **/
     typedef bool (*ConntectionCallback_t)(ConnectionState_t state,const struct sockaddr_in &clientAddr,Handle_t handle,void *pUser);
     /**
@@ -41,7 +43,7 @@ public:
      *   uLength : Length of the data buffer
      *   pUser: pointer passed in during registration 
      **/
-    typedef bool (*DataCallback_t)(Handle_t handle,unsigned char *pData, unsigned uLength,void *pUser);
+    typedef void (*DataCallback_t)(Handle_t handle,unsigned char *pData, unsigned uLength,void *pUser);
     /** @brief starts the server */
     bool start();
     /** @brief Class constructor */

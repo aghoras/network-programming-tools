@@ -17,7 +17,7 @@ public:
         return m_Size;
     };
     /** @brief appends a block to the list of maintained blocks */
-    unsigned Append(unsigned char *pData,unsigned length);
+    unsigned Append(const unsigned char *pData,unsigned length);
     /** @brief Returns a specified number of bytes at the given offset */
     bool Peek(unsigned char *pBuffer,unsigned size,unsigned offset=0);
     /** @brief Gets data and removes it from the head of the list */

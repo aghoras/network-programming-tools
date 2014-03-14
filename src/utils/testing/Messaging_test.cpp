@@ -20,7 +20,7 @@ class transmitsAll:public CMessaging{
 protected:
     CAssembler m_transmittedData; //this holds the the data we get
 
-    virtual int xmitMsg(unsigned char *pBuffer, unsigned uLength){
+    virtual int xmitMsg(const unsigned char *pBuffer, unsigned uLength){
         m_transmittedData.Append(pBuffer,uLength);
         return (int)uLength;
     }
@@ -56,7 +56,7 @@ protected:
     /**
      * Function that emulates the low level transfer
      */
-    virtual int xmitMsg(unsigned char *pBuffer, unsigned uLength){
+    virtual int xmitMsg(const unsigned char *pBuffer, unsigned uLength){
 
         if(m_bForceTransferError){
             return -1;
@@ -136,8 +136,8 @@ TEST(fullTransmiter,simpleTransmitTest){
     //there should be no more messages
     ASSERT_EQ(t.getMessageCount(), (unsigned)0);
 
-    delete msg.pData;
-    delete pRawData;
+    delete[] msg.pData;
+    delete[] pRawData;
 }
 
 /**
@@ -174,8 +174,8 @@ TEST(fullTransmiter,multipleSimpleTransmitTest){
     ASSERT_EQ(msg.uMsgLength, messageLength);
     //there should be no more messages
     ASSERT_EQ(t.getMessageCount(), (unsigned)1);
-    delete msg.pData;
-    delete pRawData;
+    delete[] msg.pData;
+    delete[] pRawData;
 
     //check the message contents of the second message
     msg=t.getMsg();
@@ -183,7 +183,7 @@ TEST(fullTransmiter,multipleSimpleTransmitTest){
     ASSERT_EQ(msg.uMsgLength, messageLength);
     //there should be no more messages
     ASSERT_EQ(t.getMessageCount(), (unsigned)0);
-    delete msg.pData;
+    delete[] msg.pData;
 
 }
 
@@ -225,7 +225,7 @@ TEST(fullTransmiter,partialMessageReceived){
     ASSERT_EQ(msg.uMsgLength, messageLength);
     //there should be no more messages
     ASSERT_EQ(t.getMessageCount(), (unsigned)0);
-    delete msg.pData;
+    delete[] msg.pData;
 
     //process the rest of the data
     ASSERT_TRUE(t.processChunk(pRawData+firstRxChunkSize,secondRxChunkSize))
@@ -238,9 +238,9 @@ TEST(fullTransmiter,partialMessageReceived){
     ASSERT_EQ(msg.uMsgLength, messageLength);
     //there should be no more messages
     ASSERT_EQ(t.getMessageCount(), (unsigned)0);
-    delete msg.pData;
+    delete[] msg.pData;
 
-    delete pRawData;
+    delete[] pRawData;
 
 }
 
@@ -279,8 +279,8 @@ TEST(partialTransmitter,simpleTransmitTest){
     //there should be no more messages
     ASSERT_EQ(t.getMessageCount(), (unsigned)0);
 
-    delete msg.pData;
-    delete pRawData;
+    delete[] msg.pData;
+    delete[] pRawData;
 }
 
 /**
@@ -319,8 +319,8 @@ TEST(partialTransmitter,withRetries){
     //there should be no more messages
     ASSERT_EQ(t.getMessageCount(), (unsigned)0);
 
-    delete msg.pData;
-    delete pRawData;
+    delete[] msg.pData;
+    delete[] pRawData;
 }
 
 /**
@@ -332,7 +332,6 @@ TEST(partialTransmitter,expectedFailures){
     const char *szTestMsg="Hello world";
     unsigned char transmitBuffer[messageLength];
     unsigned char *pRawData;
-    CMessaging::Message_t msg;
     unsigned rawDataSize;
 
     strncpy((char*)transmitBuffer,szTestMsg,messageLength);
@@ -359,7 +358,7 @@ TEST(partialTransmitter,expectedFailures){
     ASSERT_FALSE(t.processChunk(pRawData,rawDataSize));
     //There should be only no messages
     ASSERT_EQ(t.getMessageCount(), (unsigned)0);
-    delete pRawData;
+    delete[] pRawData;
 
     //send data successfully
     ASSERT_TRUE(t.sendMessage(transmitBuffer,messageLength));
@@ -370,7 +369,7 @@ TEST(partialTransmitter,expectedFailures){
     ASSERT_FALSE(t.processChunk(pRawData,rawDataSize));
     //There should be only no messages
     ASSERT_EQ(t.getMessageCount(), (unsigned)0);
-    delete pRawData;
+    delete[] pRawData;
 
 
 

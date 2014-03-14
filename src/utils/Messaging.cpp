@@ -39,7 +39,7 @@ CMessaging::~CMessaging() {
  *  @retval true success
  *  @retval false if the message cannot be queued
  **/
-bool CMessaging::xmitWithRetry(unsigned char *pBuffer, unsigned uLength) {
+bool CMessaging::xmitWithRetry(const unsigned char *pBuffer, unsigned uLength) {
     unsigned bytesSent = 0;
     unsigned retryCounter;
     int results;
@@ -77,7 +77,7 @@ bool CMessaging::xmitWithRetry(unsigned char *pBuffer, unsigned uLength) {
  * @retval true Message was sent successfully
  * @retval false Message was not sent successfully
  */
-bool CMessaging::sendMessage(unsigned char* pBuffer, unsigned uLength) {
+bool CMessaging::sendMessage(const unsigned char* pBuffer, unsigned uLength) {
     unsigned char header[HEADER_SIZE];
     unsigned char trailer[TRAILER_SIZE]={ETX};
 
@@ -154,7 +154,7 @@ bool CMessaging::processChunk(unsigned char* pBuffer, unsigned uLength) {
         if(trailer[0] != ETX){
             //oops! The trailer was not valid
             //dump the message
-            delete msg.pData;
+            delete[] msg.pData;
             PTRACE("Found bad trailer\n");
             break;
         }

@@ -3,7 +3,7 @@
  * of data into one continuous buffer
  */
 #include "assembler.h"
-
+#include <string.h>
 
 /**
  * Class constructor 
@@ -40,7 +40,7 @@ void CAssembler::Clear() {
  * @return the new size of the list
  * @note Data will be copied from the input data buffer into internal structures 
  **/
-unsigned CAssembler::Append(unsigned char *pData,unsigned length) {
+unsigned CAssembler::Append(const unsigned char *pData,unsigned length) {
     BlockInfo_t info={0};
 
     info.pBuffer=new unsigned char[length];

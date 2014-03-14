@@ -48,16 +48,16 @@ protected:
      *  @return number bytes that were successfully transmitted (can be zero)
      *  @retval -1 if the message cannot be queued due to an error
      **/
-    virtual int xmitMsg(unsigned char *pBuffer, unsigned uLength)=0;
+    virtual int xmitMsg(const unsigned char *pBuffer, unsigned uLength)=0;
 
     /** @brief calls the xmitMsg function and retries if it cannot queue the message */
-    bool xmitWithRetry(unsigned char *pBuffer, unsigned uLength);
+    bool xmitWithRetry(const unsigned char *pBuffer, unsigned uLength);
 
 public:
     CMessaging();
     virtual ~CMessaging();
     /** @brief sends a message to remote end */
-    bool  sendMessage(unsigned char *pMsg,unsigned uLength);
+    bool  sendMessage(const unsigned char *pMsg,unsigned uLength);
     /** @brief adds a chunk of data to internal buffer in order to extract message */
     bool  processChunk(unsigned char *pBuffer, unsigned uLength);
     /** @brief returns the size of the current message */
