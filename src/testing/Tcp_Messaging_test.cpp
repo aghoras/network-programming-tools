@@ -8,8 +8,8 @@
 
 #include <algorithm>
 #include "gtest.h"
-#include "../src/tcp_server.h"
-#include "../src/tcp_messaging.h"
+#include "tcp_server.h"
+#include "tcp_messaging.h"
 
 
 /**

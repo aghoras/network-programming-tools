@@ -5,7 +5,7 @@
  * @author ali
  */
 
-#include "../src/Messaging.h"
+#include "Messaging.h"
 #include <algorithm>
 
 #include "gtest.h"
