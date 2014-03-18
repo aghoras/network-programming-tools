@@ -360,6 +360,7 @@ void* CTimer::timerServiceFunc(){
             if(m_bStopTimerSvc){
                 m_ActiveTimerQueue.UnlockMutex();
                 m_bThreadExited=true;
+                PTRACE("Timer Handler Thread exited inside processing loop\n");
                 return 0;
             }
         }
@@ -430,12 +431,13 @@ void* CTimer::timerServiceFunc(){
             unsigned int uSleepTime=diff.tv_nsec/1000+diff.tv_sec*MILLION; //in uS    
             //compute wake time
 #ifdef _DEBUG_TIMER
-            PTRACE1("Resetting alarm for %u uS\n",uSleepTime);
+            //PTRACE1("Resetting alarm for %u uS\n",uSleepTime);
 #endif                   
             m_ActiveTimerQueue.WaitOnObject(uSleepTime);
         }
     }
     m_bThreadExited=true;
+    PTRACE("Timer Handler Exited Started\n");
     return 0;
 }
 
@@ -457,7 +459,7 @@ void CTimer::DumpValidTimers(){
                 m_TimerList[i].pUser,
                 m_TimerList[i].bAutoReset);    
             PTRACE1("Func Ptr: %8p\t",m_TimerList[i].pTimerServiceFunc);
-            PTRACE2("Intvl: %8ld.%09d\t",m_TimerList[i].interval.tv_sec,m_TimerList[i].interval.tv_nsec);
+            PTRACE2("Intvl: %8ld.%09ld\t",m_TimerList[i].interval.tv_sec,m_TimerList[i].interval.tv_nsec);
             PTRACE2("Exp Time : %8ld.%09ld\t",m_TimerList[i].ExpiredTime.tv_sec,m_TimerList[i].ExpiredTime.tv_nsec);
             PTRACE1("State: %s\n",m_TimerList[i].TimerState == TimerActive ? "Active":"Suspended");
         }
@@ -488,7 +490,7 @@ void CTimer::DumpTimersQueue(){
     m_ActiveTimerQueue.UnlockMutex();
 
     PTRACE("-----------------------------------------\n");    
-    PTRACE2("Now: %ld.%09d\n",now.tv_sec,now.tv_nsec);
+    PTRACE2("Now: %ld.%09ld\n",now.tv_sec,now.tv_nsec);
     for(i=0;i<nElements;i++){
 
         if(pTimerInfoList[i]!=NULL){           
@@ -496,7 +498,7 @@ void CTimer::DumpTimersQueue(){
                 (*pTimerInfoList[i])->pUser,
                 (*pTimerInfoList[i])->bAutoReset);    
             PTRACE1("Func Ptr: %8p\t",(*pTimerInfoList[i])->pTimerServiceFunc);
-            PTRACE2("Intvl: %8ld.%09d\t",(*pTimerInfoList[i])->interval.tv_sec,(*pTimerInfoList[i])->interval.tv_nsec);
+            PTRACE2("Intvl: %8ld.%09ld\t",(*pTimerInfoList[i])->interval.tv_sec,(*pTimerInfoList[i])->interval.tv_nsec);
             PTRACE2("Exp Time : %8ld.%09ld\t",(*pTimerInfoList[i])->ExpiredTime.tv_sec,(*pTimerInfoList[i])->ExpiredTime.tv_nsec);
             PTRACE1("State: %s\n",(*pTimerInfoList[i])->TimerState == TimerActive ? "Active":"Suspended");
         }
