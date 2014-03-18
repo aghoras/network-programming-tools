@@ -1,6 +1,7 @@
 /**
- * @file SocketMessage_test.cpp
+ * @file Messaging_test.cpp
  *
+ * Unit test procedures for the messaging class.
  * @date   Mar 12, 2014
  * @author ali
  */

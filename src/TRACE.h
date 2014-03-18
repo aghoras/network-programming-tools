@@ -20,11 +20,11 @@
 
 //useful definition
 #define MILLION (1000000L)
-#define BILLION (MILLION*MILLION)
+#define BILLION (MILLION*1000)
 //power of two constants
 #define KILO (1024)
 #define MEG  (KILO*KILO)
-#define GIG  (MEG*MEG)
+#define GIG  (MEG*KILO)
 
 #define PERROR(fmt)                printf("%s:%d "fmt,__FILE__,__LINE__)
 #define PERROR1(fmt,s0)            printf("%s:%d "fmt,__FILE__,__LINE__,s0)

@@ -7,6 +7,7 @@
 #   define SOCKET int
 #endif
 
+#include <string>
 #include <pthread.h>
 #include <map>
 

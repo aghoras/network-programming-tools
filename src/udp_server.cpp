@@ -8,7 +8,7 @@
 #   define close closesocket
 #   define SHUT_RDWR SD_BOTH
 #   define socklen_t int
-#elif (IAS_TARGET_OS == OS_VXWORKS)
+#elif defined(OS_VXWORKS)
 #   include "sched.h"
 #   include "sockLib.h"
 #   include "inetLib.h"
@@ -39,7 +39,7 @@
 #include <assert.h>
 #include "udp_server.h"
 #include "TRACE.h"
-#include <exception>
+#include <stdexcept>
 
 using namespace std;
 
@@ -52,7 +52,7 @@ CUdpServer::CUdpServer(unsigned uPort)
     m_uPort=uPort;
     m_bBiDirectional = false;
     if(initServer() == false){
-        throw new exception("Could not init server");
+        throw new runtime_error("Could not init server");
     }
 }
 
@@ -69,7 +69,7 @@ CUdpServer::CUdpServer(unsigned uSendPort,string serverAddr,unsigned uReceivePor
     m_uPort=uReceivePort;
     m_bBiDirectional = true;
     if(initServer() == false){
-        throw new exception("Could not init server");
+        throw new runtime_error("Could not init server");
     }
     
     memset(&sin,0,sizeof(sin));
@@ -89,7 +89,7 @@ CUdpServer::CUdpServer(unsigned uSendPort,string serverAddr,unsigned uReceivePor
         close(m_Socket);
         m_Socket=-1;
         m_bBiDirectional =false;
-        throw new exception("Could not connect to client");
+        throw new runtime_error("Could not connect to client");
     }
      PTRACE("Done with client initialization\n");
 }
@@ -216,6 +216,7 @@ bool CUdpServer::start(){
     unsigned char buffer[64*1024];
     int buffer_length=sizeof(buffer);
     int nResults=0;
+    UNUSED(now);
 
     PTRACE2("Server on port %u started at %s",m_uPort,ctime(&now));
     //do we have good socket to listen over
