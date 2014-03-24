@@ -5,7 +5,6 @@
  * @author ali
  */
 
-
 #include <algorithm>
 #include "gtest.h"
 #include "tcp_server.h"
@@ -15,7 +14,7 @@
 /**
  * This function is used to forward received data back to the message handler
  */
- void helperFunction(CTcpServer::Handle_t handle,unsigned char *pData, unsigned uLength,void *pUser){
+ static void helperFunction(CTcpServer::Handle_t handle,unsigned char *pData, unsigned uLength,void *pUser){
      CTcpMessaging *pDest=(CTcpMessaging *) pUser;
 
      pDest->processChunk(pData,uLength);
@@ -49,5 +48,4 @@ TEST(TcpMessaging,general){
 
     server.StopSeverThread();
 }
-
 

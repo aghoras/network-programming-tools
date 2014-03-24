@@ -20,6 +20,11 @@ CTcpMessaging::CTcpMessaging() {
 
 }
 
+CTcpMessaging::~CTcpMessaging() {
+   if(m_socket != -1){
+       disconnect();
+   }
+}
 
 
 /** low level transmit function
@@ -78,6 +83,7 @@ bool CTcpMessaging::connect(string sIpAddress, unsigned uPort) {
         PTRACE1("Failed to connect to server. Reason:  %s\n", strerror(errno) );
         close(m_socket);
         m_socket=-1;
+        return false;
     }
 
     return true;
@@ -88,7 +94,9 @@ bool CTcpMessaging::connect(string sIpAddress, unsigned uPort) {
  * Disconnects from the server
  */
 void CTcpMessaging::disconnect() {
-    shutdown(m_socket,SHUT_RDWR);
-    close(m_socket);
-    m_socket=-1;
+    if(m_socket != -1){
+        shutdown(m_socket,SHUT_RDWR);
+        close(m_socket);
+        m_socket=-1;
+    }
 }

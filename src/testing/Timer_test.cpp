@@ -8,7 +8,6 @@
  * @author ali
  */
 
-
 #include "Timer.h"
 #include "TRACE.h"
 #include "gtest.h"
@@ -139,7 +138,7 @@ TEST(Timer,diff_timespec){
     EXPECT_EQ(c.tv_nsec,500000000);
 }
 
-void basicTimerCallback(unsigned id,void *pUser){
+static void basicTimerCallback(unsigned id,void *pUser){
     CTimeList *pTimeList=( CTimeList *) pUser;
     timespec now;
     CTimer::getTime(now);
@@ -211,7 +210,7 @@ TEST(Timer,multipleTimers) {
     CTimeList timeList[nTimers]; // a list of times that the timer was invoked
     const unsigned testIntervalMs[nTimers] = { 10,30,90,270,500,800,1000,2000 };  // how far apart should the tests be scheduled
     const unsigned numTestEnvents = 5; //number of events for the longest timer
-    const unsigned MaxAllowedError = 2; //number of allowed timer error
+    const unsigned MaxAllowedError = 3; //number of allowed timer error in mS
     std::list<timespec>::iterator it, last_it;
     std::list<timespec> tempTimeList;
 
@@ -492,3 +491,5 @@ TEST(Timer,dumpFunctions) {
     timerManager.DumpValidTimers();
 
 }
+
+

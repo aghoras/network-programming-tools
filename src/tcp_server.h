@@ -102,9 +102,8 @@ protected:
     int BuildSelectList(void);
     /** @brief Calls the users close connection callback */
     void CloseConnectionCallback(Handle_t handle);
-    
-    
-    friend void * ThreadHelper(void *);;
+
+    static void *threadHelper(void *);
 };
 
 #endif /*_TCP_SERVER_H_*/

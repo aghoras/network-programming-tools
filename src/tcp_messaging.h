@@ -21,6 +21,7 @@ protected:
     virtual int xmitMsg(const unsigned char *pBuffer, unsigned uLength);
 public:
     CTcpMessaging();
+    ~CTcpMessaging();
     /** @brief connects to server on the client side*/
     bool connect(std::string sIpAddress,unsigned uPort);
     /** @brief disconnects from sever on the client side */
@@ -32,3 +33,4 @@ public:
 };
 
 #endif /* TCPMESSAGING_H */
+

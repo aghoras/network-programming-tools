@@ -55,7 +55,7 @@ CTcpServer::CTcpServer(unsigned uPort) {
     
     memset(&sin,0,sizeof(sin));
 #   ifdef WIN32
-    //winsock intialization stuff
+    //winsock initialization stuff
     WORD wVersionRequested;
     WSADATA wsaData;
     
@@ -276,7 +276,7 @@ bool CTcpServer::HandleConnection(SOCKET socket) {
         clientInfo.handle=NewSocket;
 
         PTRACE2("Client connected from %s at %s\n",inet_ntoa(cin.sin_addr),ctime(&now));
-        PTRACE1("Client Count: %d\n",m_ClientList.size());
+        PTRACE1("Client Count: %u\n",(unsigned)m_ClientList.size());
 
         //if we can call the callback
         if(m_pConnectionCallback != NULL) {
@@ -541,7 +541,7 @@ bool CTcpServer::SendToClient(Handle_t handle,unsigned char *pData,unsigned uLen
  */
 bool CTcpServer::StartSeverThread(){
 
-    return ( pthread_create(&m_threadId,NULL,ThreadHelper,this) == 0);
+    return ( pthread_create(&m_threadId,NULL,threadHelper,this) == 0);
 }
 
 
@@ -559,7 +559,7 @@ bool CTcpServer::StopSeverThread(){
 /**
  * Helper function for running the server thread
  */
-void *ThreadHelper(void *pUser){
+void *CTcpServer::threadHelper(void *pUser){
     CTcpServer *pServer = (CTcpServer*)pUser;
 
     pServer->start();
