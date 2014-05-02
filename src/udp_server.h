@@ -10,9 +10,19 @@
 #include <string>
 #include <pthread.h>
 #include <map>
+#include <boost/function.hpp>
 
 extern "C" void * udp_server_thread_helper(void *);
 
+/**
+ * Notes on creating a callback:
+ * 1)Create a class member (could be of any access type)
+ *  eg. protected: incomingDataCallback(unsigned char *pData, unsigned uLength);
+ * 2)Call the CUdpServer::RegisterCallback
+ *  e.g  m_UdpServer.RegisterDataCallback(boost::bind(&CIpChannel::incomingDataCallback, this,_1,_2));
+ * 3)It is possible to bind additional variables to the callback function during registration via
+ *   a the boost::bind function. These variables will be passed back into the callback function
+ */
 class CUdpServer
 {
 public:
@@ -21,7 +31,7 @@ public:
     /** @brief constructor used for bi directional connected UDP sockets */
     CUdpServer(unsigned uSendPort,std::string serverAddr,unsigned uReceivePort);
     /** @brief Sends data to bi-directional client */
-    bool SendToClient(unsigned char *pData,unsigned length);
+    bool SendToClient(const unsigned char *pData,unsigned length) const;
     
 	/** @brief Class destructor */
 	~CUdpServer(void);
@@ -31,9 +41,9 @@ public:
      *   uLength : Length of the data buffer
      *   pUser: pointer passed in during registration 
      **/
-    typedef void (*DataCallback_t)(unsigned char *pData, unsigned uLength,void *pUser);
+	typedef boost::function<void(unsigned char*,unsigned)> DataCallback_t;
 	/** @brief registers a callback function for data reception */
-    void RegisterDataCallback(DataCallback_t pCallback,void *pUser);	
+    void RegisterDataCallback(DataCallback_t callback);
 	/** @brief this function starts a thread and calls the start function */
     bool StartServerThread();
     /** @brief this function stops the server thread */

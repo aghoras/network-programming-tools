@@ -38,7 +38,7 @@
 #include <errno.h>
 #include <assert.h>
 #include "udp_server.h"
-#include "TRACE.h"
+#include <boost/log/trivial.hpp>
 #include <stdexcept>
 
 using namespace std;
@@ -77,21 +77,20 @@ CUdpServer::CUdpServer(unsigned uSendPort,string serverAddr,unsigned uReceivePor
     sin.sin_addr.s_addr =  inet_addr(serverAddr.c_str());;
     sin.sin_port = htons(uSendPort); 
 
-    PTRACE("Connecting to client..\n");
+    BOOST_LOG_TRIVIAL(trace) << "Connecting to client..";
     if(connect(m_Socket,(sockaddr*)&sin,sizeof(sin)) < 0){
 #       ifndef WIN32
             int err=errno;
 #       else
             int err=WSAGetLastError();
 #       endif
-        PERROR1("Error during connect: Errno: %d\n",err);
-        perror("connect");
+        BOOST_LOG_TRIVIAL(error) << "Error during connect:  " << strerror(err);
         close(m_Socket);
         m_Socket=-1;
         m_bBiDirectional =false;
         throw new runtime_error("Could not connect to client");
     }
-     PTRACE("Done with client initialization\n");
+    BOOST_LOG_TRIVIAL(trace) << "Done with client initialization";
 }
 
 CUdpServer::~CUdpServer(void)
@@ -113,9 +112,9 @@ CUdpServer::~CUdpServer(void)
  * @retval true Success
  * @retval false failure
  */
-bool CUdpServer::SendToClient(unsigned char *pData,unsigned uLength){
+bool CUdpServer::SendToClient(const unsigned char *pData,unsigned uLength) const{
     if(m_bBiDirectional == false){
-        PERROR("Cannot send data to unidirectional client\n");
+        BOOST_LOG_TRIVIAL(error) << "Cannot send data to unidirectional client\n";
     }
 
     if(send(m_Socket,(char*)pData,uLength,0) < 0){
@@ -163,23 +162,23 @@ bool CUdpServer::initServer(){
 #       else
             int err=WSAGetLastError();
 #       endif
-        PERROR1("Error during socket creation: Errno: %d\n",err);
+        BOOST_LOG_TRIVIAL(error) << "Error during socket creation: Errno: " <<  err;
         perror("socket");
         return false;
     }
     /* So that we can re-bind to it without TIME_WAIT problems */
-    PTRACE("Setting socket options..\n");
+    BOOST_LOG_TRIVIAL(trace) << "Setting socket options...";
     setsockopt(m_Socket, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse_addr, sizeof(reuse_addr));
 
     // bind to the interface
-    PTRACE("Binding to interface..\n");
-    if (bind(m_Socket,(struct sockaddr *)&sin,sizeof(sin)) == -1) {
+    BOOST_LOG_TRIVIAL(trace) << "Binding to interface...";
+    if (::bind(m_Socket,(struct sockaddr *)&sin,sizeof(sin)) < 0) {
 #       ifndef WIN32
             int err=errno;
 #       else
             int err=WSAGetLastError();
 #       endif
-        PERROR1("Error during bind: Errno: %d\n",err);
+        BOOST_LOG_TRIVIAL(error) << "Error during bind: Errno: " << err;
         perror("bind");
         close(m_Socket);
         m_Socket=-1;
@@ -187,12 +186,12 @@ bool CUdpServer::initServer(){
     }
 
 #   ifndef WIN32
-    PTRACE("Setting signals..\n");
+    BOOST_LOG_TRIVIAL(trace) << "Setting signals...";
     //this prevents writing to closed socket from seq faulting the process
     signal(SIGPIPE, SIG_IGN);
 #   endif
 
-    PTRACE("Done with server initialization..\n");
+    BOOST_LOG_TRIVIAL(trace) <<  "Done with server initialization...";
     return true;
 }
 
@@ -201,9 +200,8 @@ bool CUdpServer::initServer(){
  * @param pCallback Pointer to Callback function
  * @param pUser Pointer to user provided pointer passed back into the callback function
  */
-void CUdpServer::RegisterDataCallback(DataCallback_t pCallback,void *pUser){
+void CUdpServer::RegisterDataCallback(DataCallback_t pCallback){
     m_pNewDataCallback=pCallback;
-    m_pNewDataUser=pUser;
 }
 
 /** 
@@ -216,9 +214,8 @@ bool CUdpServer::start(){
     unsigned char buffer[64*1024];
     int buffer_length=sizeof(buffer);
     int nResults=0;
-    UNUSED(now);
 
-    PTRACE2("Server on port %u started at %s",m_uPort,ctime(&now));
+    BOOST_LOG_TRIVIAL(trace) <<  "Server on port " << m_uPort << " started at " << ctime(&now);
     //do we have good socket to listen over
     if(m_Socket == -1) {
         //bad socket
@@ -229,7 +226,8 @@ bool CUdpServer::start(){
         //check the results
         if(nResults > 0 && m_pNewDataCallback != NULL){
             //give the data to the user
-            m_pNewDataCallback(buffer,nResults,m_pNewDataUser);
+            //m_pNewDataCallback(buffer,nResults,m_pNewDataUser);
+            m_pNewDataCallback(buffer,nResults);
         }
     }while(1);
     
@@ -240,8 +238,7 @@ bool CUdpServer::start(){
 #       else
             int err=WSAGetLastError();
 #       endif
-        PERROR1("Error during recv: Errno: %d\n",err);
-        perror("recv");
+        BOOST_LOG_TRIVIAL(error) << "Error during recv: Errno: << " << strerror(err);
         close(m_Socket);
         m_Socket = -1;
         return false;
