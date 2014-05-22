@@ -1,5 +1,4 @@
 #include "Timer.h"
-#include "TRACE.h"
 #include <assert.h>
 #include <iostream>
 
@@ -10,19 +9,19 @@
 //error exceeds this amount
 #define MAX_TIMER_ACCURACY 0.25 
 
-const unsigned long CTimer::MAX_TIMER_INTERVAL=std::numeric_limits<unsigned long int>::max()/2-1;
+const unsigned long Timer::MAX_TIMER_INTERVAL=std::numeric_limits<unsigned long int>::max()/2-1;
 
-CTimer::CTimer(void):m_TimerList(MAX_TIMER_COUNT)
+Timer::Timer(void):m_TimerList(MAX_TIMER_COUNT)
 {
     m_bStopTimerSvc=false;
     m_bThreadExited=true;
     pthread_mutex_init(&m_TimerListMutex,NULL);
-    if(pthread_create(&m_timerServiceThreadId,NULL,CTimer_Thread_Helper,this)){
+    if(pthread_create(&m_timerServiceThreadId,NULL,Timer_Thread_Helper,this)){
         throw "Could not start thread";
     }
 }
 
-CTimer::~CTimer(void)
+Timer::~Timer(void)
 {
     unsigned counter=0;
     m_bStopTimerSvc=true;
@@ -33,9 +32,10 @@ CTimer::~CTimer(void)
         counter++;
     }
     if(m_bThreadExited == false) {
-        PERROR("Service thread did not exit. Cancelling thread.\n");
+        BOOST_LOG_TRIVIAL(error) << "Service thread did not exit. Cancelling thread";
         pthread_cancel(m_timerServiceThreadId);
     }
+    pthread_join(m_timerServiceThreadId,0);
     pthread_mutex_lock(&m_TimerListMutex);
     pthread_mutex_destroy(&m_TimerListMutex);
 }
@@ -43,7 +43,7 @@ CTimer::~CTimer(void)
 /**
 * Gets the current time based on the operating system
 */
-void CTimer::getTime(struct timespec &time){
+void Timer::getTime(struct timespec &time){
     //////////////
     //win32
 #ifdef WIN32
@@ -81,7 +81,7 @@ void CTimer::getTime(struct timespec &time){
  * @param a timespec to convert
  * @return value of timespec in miliseconds
  */
-unsigned long  CTimer::timespec2ms(const struct timespec &a){
+unsigned long  Timer::timespec2ms(const struct timespec &a){
     return (a.tv_sec*1000+a.tv_nsec/MILLION);
 }
 
@@ -93,7 +93,7 @@ unsigned long  CTimer::timespec2ms(const struct timespec &a){
 * @retval  1  if a  > b
 * @retval -1  if a  < b
 */
-int CTimer::comp_timespec(struct timespec &a, struct timespec &b) {
+int Timer::comp_timespec(struct timespec &a, struct timespec &b) {
     if ( (a.tv_sec > b.tv_sec) ||
         (a.tv_sec == b.tv_sec && a.tv_nsec > b.tv_nsec)) {
             return 1;
@@ -109,7 +109,7 @@ int CTimer::comp_timespec(struct timespec &a, struct timespec &b) {
 * @param b second argument
 * @return The difference between a and b
 */
-struct timespec CTimer::diff_timespec(const struct timespec &a, const struct timespec &b) {
+struct timespec Timer::diff_timespec(const struct timespec &a, const struct timespec &b) {
     struct timespec r;
 
     if (a.tv_nsec < b.tv_nsec) {
@@ -129,7 +129,7 @@ struct timespec CTimer::diff_timespec(const struct timespec &a, const struct tim
 * @param b second argument
 * @return The sum of a and b
 */
-struct timespec CTimer::add_timespec(const struct timespec &a, const struct timespec &b) {
+struct timespec Timer::add_timespec(const struct timespec &a, const struct timespec &b) {
     struct timespec r;
 
     r.tv_sec = a.tv_sec + b.tv_sec + (a.tv_nsec + b.tv_nsec) / BILLION;
@@ -143,11 +143,11 @@ struct timespec CTimer::add_timespec(const struct timespec &a, const struct time
 * bTriggerSvcRoutine Wet to true if the service function should be 
 *                          triggered after stopping the timer 
 */
-void CTimer::StopTimer(unsigned hTimer,bool bTriggerSvcRoutine){
+void Timer::StopTimer(unsigned hTimer,bool bTriggerSvcRoutine){
     unsigned uTimer=(unsigned)hTimer;
     if(!m_TimerList.IsGoodHandle(uTimer)){
         assert(0);
-        PERROR("StopTimer received bad handle\n");
+        BOOST_LOG_TRIVIAL(error) << "StopTimer received bad handle";
         return;
     }
     else{
@@ -159,7 +159,7 @@ void CTimer::StopTimer(unsigned hTimer,bool bTriggerSvcRoutine){
             if (m_TimerList[uTimer].pHeapContainer != NULL) {
                 *m_TimerList[uTimer].pHeapContainer=NULL;
             }
-            m_TimerList[uTimer].pHeapContainer=NULL;
+            m_TimerList[uTimer].pHeapContainer.reset((Timer::TimerInfo_t**) 0);
             //if we need to trigger the service routine
             if(bTriggerSvcRoutine){
                 (m_TimerList[uTimer].pTimerServiceFunc)(m_TimerList[uTimer].hTimer,m_TimerList[uTimer].pUser);
@@ -176,13 +176,13 @@ void CTimer::StopTimer(unsigned hTimer,bool bTriggerSvcRoutine){
 * @param bTriggerSvcRoutine Set to true if the service function is to be called
 *                        after resetting the timer
 **/
-void CTimer::RestartTimer(unsigned hTimer,bool bTriggerSvcRoutine){
+void Timer::RestartTimer(unsigned hTimer,bool bTriggerSvcRoutine){
     unsigned uTimer=(unsigned)hTimer;
-    struct TIMER_INFO_STRUCT   **pHeapContainer;
+    pHeapContainer_t pHeapContainer;
 
     if(!m_TimerList.IsGoodHandle(uTimer)){
         assert(0);
-        PERROR("RestartTimer received bad handle\n");
+        BOOST_LOG_TRIVIAL(error) << "RestartTimer received bad handle";
         return;
     }
     else{
@@ -201,7 +201,7 @@ void CTimer::RestartTimer(unsigned hTimer,bool bTriggerSvcRoutine){
         m_TimerList[uTimer].TimerState=TimerActive;
         //add it to the active queue
         //set up self referencing queue container
-        m_TimerList[uTimer].pHeapContainer=new TimerInfo_t*;
+        m_TimerList[uTimer].pHeapContainer.reset(new TimerInfo_t*);
         *m_TimerList[uTimer].pHeapContainer=&m_TimerList[uTimer];
         pHeapContainer=m_TimerList[uTimer].pHeapContainer;
 
@@ -222,11 +222,11 @@ void CTimer::RestartTimer(unsigned hTimer,bool bTriggerSvcRoutine){
 * Deletes a timer
 * @param hTimer timer handle
 */
-void CTimer::DeleteTimer(unsigned hTimer){
+void Timer::DeleteTimer(unsigned hTimer){
     unsigned uTimer=(unsigned)hTimer;
     if(!m_TimerList.IsGoodHandle(uTimer)){
         assert(0);
-        PERROR("DeleteTimer received bad handle\n");
+        BOOST_LOG_TRIVIAL(error) << "DeleteTimer received bad handle";
         return;
     }
     else{
@@ -245,13 +245,13 @@ void CTimer::DeleteTimer(unsigned hTimer){
 * @retval true  if the timer is active
 * @retval flase  if the timer is stopped
 **/
-bool CTimer::IsTimerActive(unsigned hTimer){
+bool Timer::IsTimerActive(unsigned hTimer){
     bool bResults=false;
     unsigned uTimer=(unsigned)hTimer;
 
     if(!m_TimerList.IsGoodHandle(uTimer)){
         assert(0);
-        PERROR("IsTimerActive received bad handle\n");
+        BOOST_LOG_TRIVIAL(error) << "IsTimerActive received bad handle";
         return false;
     }
     else{
@@ -274,7 +274,7 @@ bool CTimer::IsTimerActive(unsigned hTimer){
 * @return timer handle.
 * @retval INVALID_TIMER_HANDLE if a timer cannot be created
 **/
-unsigned CTimer::CreateTimer(unsigned long uIntervalMs,pTimer_Callback_t pTimerFunc,void *pUser,State_t InitialState,bool bAutoReset){
+unsigned Timer::CreateTimer(unsigned long uIntervalMs,pTimer_Callback_t pTimerFunc,void *pUser,State_t InitialState,bool bAutoReset){
     unsigned int uTimer=0;
 
     assert(pTimerFunc != NULL);
@@ -291,7 +291,7 @@ unsigned CTimer::CreateTimer(unsigned long uIntervalMs,pTimer_Callback_t pTimerF
     //if no timers are available
     if(uTimer == (unsigned)-1){
         uTimer=-1;
-        PERROR("No Timers available\n");
+        BOOST_LOG_TRIVIAL(error) << "No Timers available";
         assert(0);
     }
     else{
@@ -309,13 +309,11 @@ unsigned CTimer::CreateTimer(unsigned long uIntervalMs,pTimer_Callback_t pTimerF
         //only active timers need the circular reference
         if(InitialState == TimerActive){
             //set up a circular reference to the heap pointer
-            m_TimerList[uTimer].pHeapContainer=new TimerInfo_t*;
+            m_TimerList[uTimer].pHeapContainer.reset(new TimerInfo_t*);
             //printf("Created heap container %p\n",m_TimerList[uTimer].pHeapContainer);
             *m_TimerList[uTimer].pHeapContainer=&m_TimerList[uTimer];
         }
-        else{
-            m_TimerList[uTimer].pHeapContainer=NULL;
-        }
+
     }
     pthread_mutex_unlock(&m_TimerListMutex);
     
@@ -336,12 +334,13 @@ unsigned CTimer::CreateTimer(unsigned long uIntervalMs,pTimer_Callback_t pTimerF
 * to service the timers
 * @return not used
 */
-void* CTimer::timerServiceFunc(){
-    TimerInfo_t  *pTimerInfo,**ppTimerInfo;
+void* Timer::timerServiceFunc(){
+    TimerInfo_t  *pTimerInfo;
+    pHeapContainer_t ppTimerInfo;
     struct timespec    now;
     bool   bQueueEmpty=false;
 
-    PTRACE("Timer Handler Thread Started\n");
+    BOOST_LOG_TRIVIAL(trace) << "Timer Handler Thread Started";
     m_bThreadExited=false;
     //lock the timer list
     m_ActiveTimerQueue.LockMutex();
@@ -352,7 +351,7 @@ void* CTimer::timerServiceFunc(){
 
         //check for empty queue
         if(bQueueEmpty){
-            PTRACE("Timer Queue is empty\n");
+            BOOST_LOG_TRIVIAL(trace) << ("Timer Queue is empty");
             //wait for wake signal
             m_ActiveTimerQueue.LockMutex();
             m_ActiveTimerQueue.WaitOnObject();
@@ -360,7 +359,7 @@ void* CTimer::timerServiceFunc(){
             if(m_bStopTimerSvc){
                 m_ActiveTimerQueue.UnlockMutex();
                 m_bThreadExited=true;
-                PTRACE("Timer Handler Thread exited inside processing loop\n");
+                BOOST_LOG_TRIVIAL(trace) << ("Timer Handler Thread exited inside processing loop");
                 return 0;
             }
         }
@@ -370,6 +369,14 @@ void* CTimer::timerServiceFunc(){
         }
         //get the first item off the queue
         ppTimerInfo=m_ActiveTimerQueue.m_Object.top();
+
+        if(ppTimerInfo == NULL){
+           m_ActiveTimerQueue.m_Object.pop();
+           m_ActiveTimerQueue.UnlockMutex();
+           continue;
+        }
+
+
         pTimerInfo=*ppTimerInfo;
         //get current time
         getTime(now);
@@ -379,8 +386,6 @@ void* CTimer::timerServiceFunc(){
             //marked to be deleted
             //////////////////////
             m_ActiveTimerQueue.m_Object.pop();
-            //free up the memory for it
-            delete ppTimerInfo;
             m_ActiveTimerQueue.UnlockMutex();
         }
         //else if(pTimerInfo->ExpiredTime<=Now){ 
@@ -396,10 +401,10 @@ void* CTimer::timerServiceFunc(){
             unsigned long intervalMs=pTimerInfo->interval.tv_nsec/MILLION+pTimerInfo->interval.tv_sec*1000;   
 
             if(diff.tv_sec >=0 && dwError > (unsigned long)((1+MAX_TIMER_ACCURACY)*intervalMs)){
-                PTRACE2(
-                    "Timer[%d] accuracy compermised!! %%Error=%3.2f\n",
-                    pTimerInfo->hTimer,
-                    ((float)(dwError)/intervalMs-1)*100);
+                BOOST_LOG_TRIVIAL(warning) <<  "Timer["
+                        << pTimerInfo->hTimer  << "] "
+                        <<" accuracy compermised!! %%Error= "
+                        << ((float)(dwError)/intervalMs-1)*100;
             }
 #endif
             //if the timer is auto reset
@@ -437,7 +442,7 @@ void* CTimer::timerServiceFunc(){
         }
     }
     m_bThreadExited=true;
-    PTRACE("Timer Handler Exited Started\n");
+    BOOST_LOG_TRIVIAL(trace) << "Timer Handler Exited Started";
     return 0;
 }
 
@@ -446,34 +451,36 @@ void* CTimer::timerServiceFunc(){
 *
 * Dumps a list of valid timers
 **/
-void CTimer::DumpValidTimers(){
+void Timer::DumpValidTimers(){
     int i;
 
-    PTRACE("-----------------------------------------\n");
+    BOOST_LOG_TRIVIAL(trace) << "-----------------------------------------";
     //PTRACE1("Now: %ld\n",GetCurrentTime());
     //make a copy of the main timer list
     pthread_mutex_lock(&m_TimerListMutex);
     for(i=0;i<MAX_TIMER_COUNT;i++){
         if(m_TimerList.IsGoodHandle(i)){
-            PTRACE3("----\nTimer Id: %8d\tParam: %8p\tAutoReset: %d\n",m_TimerList[i].hTimer,
-                m_TimerList[i].pUser,
-                m_TimerList[i].bAutoReset);    
-            PTRACE1("Func Ptr: %8p\t",m_TimerList[i].pTimerServiceFunc);
-            PTRACE2("Intvl: %8ld.%09ld\t",m_TimerList[i].interval.tv_sec,m_TimerList[i].interval.tv_nsec);
-            PTRACE2("Exp Time : %8ld.%09ld\t",m_TimerList[i].ExpiredTime.tv_sec,m_TimerList[i].ExpiredTime.tv_nsec);
-            PTRACE1("State: %s\n",m_TimerList[i].TimerState == TimerActive ? "Active":"Suspended");
+            BOOST_LOG_TRIVIAL(trace) << "-----";
+            BOOST_LOG_TRIVIAL(trace)
+                << "Timer Id: "    << m_TimerList[i].hTimer
+                << "\tParam: "     << m_TimerList[i].pUser
+                << "\tAutoReset: " << m_TimerList[i].bAutoReset
+                << "\tFunc Ptr:  " << m_TimerList[i].pTimerServiceFunc
+                << "\tIntvl: "     << m_TimerList[i].interval.tv_sec << "." << m_TimerList[i].interval.tv_nsec
+                << "\tExp Time : " << m_TimerList[i].ExpiredTime.tv_sec << "." << m_TimerList[i].ExpiredTime.tv_nsec
+                << "\tState: "     << (m_TimerList[i].TimerState == TimerActive ? "Active":"Suspended");
         }
     }
     pthread_mutex_unlock(&m_TimerListMutex);
-    PTRACE("-----------------------------------------\n");
+    BOOST_LOG_TRIVIAL(trace) << "-----------------------------------------";
 
 }
 /**
 * Dumps all active timers in the queue
 **/
-void CTimer::DumpTimersQueue(){
+void Timer::DumpTimersQueue(){
     size_t i,nElements=m_ActiveTimerQueue.m_Object.size();
-    TimerInfo_t **pTimerInfoList[MAX_TIMER_COUNT];
+    pHeapContainer_t pTimerInfoList[MAX_TIMER_COUNT];
     struct timespec now;
 
     getTime(now);
@@ -489,31 +496,33 @@ void CTimer::DumpTimersQueue(){
     }
     m_ActiveTimerQueue.UnlockMutex();
 
-    PTRACE("-----------------------------------------\n");    
-    PTRACE2("Now: %ld.%09ld\n",now.tv_sec,now.tv_nsec);
+    BOOST_LOG_TRIVIAL(trace) << "-----------------------------------------";
+    BOOST_LOG_TRIVIAL(trace) << "Now: " << now.tv_sec << "." << now.tv_nsec;
     for(i=0;i<nElements;i++){
-
-        if(pTimerInfoList[i]!=NULL){           
-            PTRACE3("----\nTimer Id: %8d\tParam: %8p\tAutoReset: %d\n",(*pTimerInfoList[i])->hTimer,
-                (*pTimerInfoList[i])->pUser,
-                (*pTimerInfoList[i])->bAutoReset);    
-            PTRACE1("Func Ptr: %8p\t",(*pTimerInfoList[i])->pTimerServiceFunc);
-            PTRACE2("Intvl: %8ld.%09ld\t",(*pTimerInfoList[i])->interval.tv_sec,(*pTimerInfoList[i])->interval.tv_nsec);
-            PTRACE2("Exp Time : %8ld.%09ld\t",(*pTimerInfoList[i])->ExpiredTime.tv_sec,(*pTimerInfoList[i])->ExpiredTime.tv_nsec);
-            PTRACE1("State: %s\n",(*pTimerInfoList[i])->TimerState == TimerActive ? "Active":"Suspended");
+        if(pTimerInfoList[i]!=NULL){
+            BOOST_LOG_TRIVIAL(trace) << "-----";
+            BOOST_LOG_TRIVIAL(trace)
+                    << "Timer Id: "       << (*pTimerInfoList[i])->hTimer
+                    << "\tParam: "        << (*pTimerInfoList[i])->pUser
+                    << "\tAutoReset: "    << (*pTimerInfoList[i])->bAutoReset
+                    << "\tFunc Ptr: "     << (*pTimerInfoList[i])->pTimerServiceFunc
+                    << "\tIntvl: "        << (*pTimerInfoList[i])->interval.tv_sec << "." << (*pTimerInfoList[i])->interval.tv_nsec
+                    << "\tExp Time : "    << (*pTimerInfoList[i])->ExpiredTime.tv_sec << "." <<(*pTimerInfoList[i])->ExpiredTime.tv_nsec
+                    << "\tState: "        << ((*pTimerInfoList[i])->TimerState == TimerActive ? "Active":"Suspended");
         }
         else{
-            PTRACE("----\nTimer Id: xxxxxxxx\tParam: xxxxxxxx\tAutoReset: x\n");
-            PTRACE("Func Ptr: xxxxxxxx\tIntvl: xxxxxxxx\tExp Time : xxxxxxxx\tState: xxxxxxx\n");
+            BOOST_LOG_TRIVIAL(trace) << "----";
+            BOOST_LOG_TRIVIAL(trace) << "Timer Id: xxxxxxxx\tParam: xxxxxxxx\tAutoReset: x";
+            BOOST_LOG_TRIVIAL(trace) << "Func Ptr: xxxxxxxx\tIntvl: xxxxxxxx\tExp Time : xxxxxxxx\tState: xxxxxxx";
         }
 
     }
-    PTRACE("-----------------------------------------\n");
+    BOOST_LOG_TRIVIAL(trace) << "-----------------------------------------";
 }
 
 
-void* CTimer_Thread_Helper(void *pUser){
-    CTimer *pTimer=(CTimer *)pUser;
+void* Timer_Thread_Helper(void *pUser){
+    Timer *pTimer=(Timer *)pUser;
 
     return pTimer->timerServiceFunc();
 }
@@ -525,8 +534,11 @@ void* CTimer_Thread_Helper(void *pUser){
 * @retval true y should be placed before x
 * @retval false y should NOT be placed before x
 **/
-bool CTimer::CompareTimerInfo::operator()(TimerInfo_t** x, TimerInfo_t** y){
+bool Timer::CompareTimerInfo::operator()(pHeapContainer_t x, pHeapContainer_t y){
 
+    if(y.get() == NULL || x.get() == NULL){
+        return false;
+    }
     if(*x == NULL && *y!=NULL)
         return false;
     else if (*x != NULL && *y==NULL)

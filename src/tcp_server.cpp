@@ -31,8 +31,7 @@
 #include <list>
 #include <errno.h>
 #include <assert.h>
-#define _SUPRESS_TRACE
-#include "TRACE.h"
+#include <boost/log/trivial.hpp>
 
 /** cygwin hack */
 #ifndef MSG_WAITALL
@@ -47,7 +46,7 @@
  * Calls constructor
  * @param uPort port number or listen over
  */
-CTcpServer::CTcpServer(unsigned uPort) {
+TcpServer::TcpServer(unsigned uPort) {
     struct sockaddr_in sin;
 
     /* Used so we can re-bind to our port while a previous connection is still in TIME_WAIT state. */
@@ -87,21 +86,21 @@ CTcpServer::CTcpServer(unsigned uPort) {
 #       else
             int err=WSAGetLastError();
 #       endif
-        PERROR1("Error during socket creation: Errno: %d\n",err);
+        BOOST_LOG_TRIVIAL(error) << "Error during socket creation: Errno: " << err;
         perror("socket");        
         return;
     }
     /* So that we can re-bind to it without TIME_WAIT problems */
-    PTRACE("Setting socket options..\n");
+    BOOST_LOG_TRIVIAL(trace) << "Setting socket options...";
     setsockopt(m_ListenSocket, SOL_SOCKET, SO_REUSEADDR, (const char *)&reuse_addr, sizeof(reuse_addr));
-    PTRACE("Setting non blocking socket options..\n");
+    BOOST_LOG_TRIVIAL(trace) << "Setting non blocking socket options...";
     SetNoBlocking(m_ListenSocket);
 
     // bind to the interface
-    PTRACE("Binding to interface..\n");
+    BOOST_LOG_TRIVIAL(trace) << "Binding to interface...";
     if (bind(m_ListenSocket,(struct sockaddr *)&sin,sizeof(sin)) == -1) {
         int err=errno;
-        PERROR1("Error during bind: Errno: %d\n",err);
+        BOOST_LOG_TRIVIAL(error) << "Error during bind: Errno: " << err;
         perror("bind");
         close(m_ListenSocket);
         m_ListenSocket=-1;
@@ -109,12 +108,12 @@ CTcpServer::CTcpServer(unsigned uPort) {
     }
     
 #   ifndef WIN32
-    PTRACE("Setting signals..\n");
+    BOOST_LOG_TRIVIAL(trace) << "Setting signals...";
     //this prevents writing to closed socket from seq faulting the process
     signal(SIGPIPE, SIG_IGN);
 #   endif
 
-    PTRACE("Done with basic initialization..\n");
+    BOOST_LOG_TRIVIAL(trace) << "Done with basic initialization..";
 }
 
 /**
@@ -123,16 +122,18 @@ CTcpServer::CTcpServer(unsigned uPort) {
  * @retval false if error
  * @note this function blocks until a kill command is received
  */
-bool CTcpServer::start() {
+bool TcpServer::start() {
     int nFds=0;
     int numSelected=0;
     ClientList_t::iterator connection;
     std::time_t now=time(0);
     std::list<Handle_t> close_list;
     std::list<Handle_t> data_list;
+    std::string sNow( ctime( &now ) );
 
+   //drop the newline in ctime
+    BOOST_LOG_TRIVIAL(trace) <<  "TCP Server on port " << m_uPort << " started at " << sNow.substr(0,sNow.length()-1);
 
-    PTRACE1("Server started at %s\n",ctime(&now));
     //do we have good socket to listen over
     if(m_ListenSocket == -1) {
         //bad socket
@@ -141,8 +142,7 @@ bool CTcpServer::start() {
     //wait for the connection
     if (listen(m_ListenSocket,MAX_CONNECTIONS) == -1) {
         int err=errno;
-        PERROR1("Error during listen: Errno: %d\n",err);
-        perror("listen");
+        BOOST_LOG_TRIVIAL(error) << "Error during listen: Errno: " <<  strerror(err);
         return false;
     }
 
@@ -159,7 +159,11 @@ bool CTcpServer::start() {
                     it!= close_list.end();
                     it++) {
                 now=time(0);
-                PTRACE1("Client disconnected at %s\n",ctime(&now));
+                std::string sNow( ctime( &now ) );
+
+                //drop the newline in ctime
+                BOOST_LOG_TRIVIAL(trace) <<  "Client disconnected at  " << sNow.substr(0,sNow.length()-1);
+
                 CloseConnectionCallback(*it);
                 pthread_mutex_lock(&m_ClientListMutex);
                 m_ClientList.erase(*it);
@@ -178,8 +182,7 @@ bool CTcpServer::start() {
             //the client list by the close_list service routine
             if(errno != EBADF) {
                 int err=errno;
-                PERROR1("Error Select: Errno: %d\n",err);
-                perror("select");
+                BOOST_LOG_TRIVIAL(error) << "Error Select: Errno: " <<  strerror(err);
                 return false;
             }
         }
@@ -237,20 +240,17 @@ bool CTcpServer::start() {
  * @retval true success
  * @retval false error
  */
-bool CTcpServer::HandleConnection(SOCKET socket) {
+bool TcpServer::HandleConnection(SOCKET socket) {
     struct sockaddr_in cin;
     socklen_t addrlen=0;
     addrlen=sizeof(cin);
-    std::time_t now=time(0);
     int nFlag = 1;
     int nResults;
-
-    UNUSED(now);
 
     memset(&cin,0,sizeof(cin));
 
     if(m_ClientList.size() >= MAX_CONNECTIONS) {
-        PTRACE("No more room for connections\n");
+        BOOST_LOG_TRIVIAL(trace) << "No more room for connections";
         return false;
     }
     
@@ -265,8 +265,7 @@ bool CTcpServer::HandleConnection(SOCKET socket) {
                    sizeof(int));    /* length of option value */
     if(nResults == -1){
         int err=errno;        
-        PERROR1("Could not disable Nagle's Algorithm. Errno: %d\n",err);
-        perror("TCP_NODELAY ");
+        BOOST_LOG_TRIVIAL(error) << "Could not disable Nagle's Algorithm. Errno: " <<  strerror(err);
     }
 #endif
 
@@ -275,14 +274,14 @@ bool CTcpServer::HandleConnection(SOCKET socket) {
 
         clientInfo.handle=NewSocket;
 
-        PTRACE2("Client connected from %s at %s\n",inet_ntoa(cin.sin_addr),ctime(&now));
-        PTRACE1("Client Count: %u\n",(unsigned)m_ClientList.size());
+        BOOST_LOG_TRIVIAL(trace) << "Client connected from " << inet_ntoa(cin.sin_addr);
+        BOOST_LOG_TRIVIAL(trace) << "Client Count: " << (unsigned)m_ClientList.size();
 
         //if we can call the callback
         if(m_pConnectionCallback != NULL) {
             //if the user does not want the connection, immediately close it
-            if(m_pConnectionCallback(New,cin,NewSocket,m_pConntectionUser) == false) {
-                PTRACE("User rejected connection!\n");
+            if(m_pConnectionCallback(New,cin,NewSocket) == false) {
+                BOOST_LOG_TRIVIAL(trace) << "User rejected connection!";
                 close(NewSocket);
                 return true;
             }
@@ -293,8 +292,7 @@ bool CTcpServer::HandleConnection(SOCKET socket) {
         pthread_mutex_unlock(&m_ClientListMutex);
     } else {
         int err=errno;        
-        PERROR1("Accept failed! Errno; %d\n",err);
-        perror("accept:");
+        BOOST_LOG_TRIVIAL(error) << "Accept failed! Errno; " <<  strerror(err);
         return false;
     }
 
@@ -307,7 +305,7 @@ bool CTcpServer::HandleConnection(SOCKET socket) {
  * @retval true all's well
  * @retval false the other end closed the connection
  */
-bool CTcpServer::HandleData(SOCKET socket) {
+bool TcpServer::HandleData(SOCKET socket) {
     unsigned char buffer[16*1024];
     size_t length;
 
@@ -317,17 +315,16 @@ bool CTcpServer::HandleData(SOCKET socket) {
         //get the command
         if(length == (unsigned)-1) {
             int err=errno;
-            PERROR1("Recieve error. Errno: %d\n",err);
-            perror("recv");            
+            BOOST_LOG_TRIVIAL(error) << "Recieve error. Errno: " <<  strerror(err);
             return false;
         } else {
             //new data
             if (m_pNewDataCallback != NULL && length > 0) {                
-                m_pNewDataCallback(socket,buffer,(unsigned)length,m_pNewDataUser);                
+                m_pNewDataCallback(socket,buffer,(unsigned)length);
             }
             //connection is being closed
             if (m_pConnectionCallback != NULL && length == 0) {
-                PTRACE("Remote end closed the connection!\n");
+                BOOST_LOG_TRIVIAL(trace) << "Remote end closed the connection!";
                 return false;
             }
         }
@@ -340,9 +337,9 @@ bool CTcpServer::HandleData(SOCKET socket) {
 /**
  * Class destructor
  */
-CTcpServer::~CTcpServer() {
+TcpServer::~TcpServer() {
     ClientList_t::iterator connection;
-    PTRACE("Server closing down...\n");
+    BOOST_LOG_TRIVIAL(trace) << "Server closing down...";
     if(m_ListenSocket != -1) {
         shutdown(m_ListenSocket,SHUT_RDWR);
         close (m_ListenSocket);
@@ -371,7 +368,7 @@ CTcpServer::~CTcpServer() {
  * @retval true successful
  * @retval false failed
  */
-bool CTcpServer::SetNoBlocking(SOCKET socket) {
+bool TcpServer::SetNoBlocking(SOCKET socket) {
 
 #ifndef WIN32
     int opts;
@@ -379,16 +376,15 @@ bool CTcpServer::SetNoBlocking(SOCKET socket) {
     opts = fcntl(socket,F_GETFL);
     if (opts < 0) {
         int err=errno;
-        PERROR1("fcntl(F_GETFL) failed: Errno: %d\n",err);
-        perror("fcntl(F_GETFL)");
+        BOOST_LOG_TRIVIAL(error) << "fcntl(F_GETFL) failed: Errno: " << strerror(err);
+
         return false;
     }
     //or in  the no block flag
     opts = (opts | O_NONBLOCK);
     if (fcntl(socket,F_SETFL,opts) < 0) {
         int err=errno;
-        PERROR1("fcntl(F_SETFL) failed: Errno: %d\n",err);
-        perror("fcntl(F_SETFL)");
+        BOOST_LOG_TRIVIAL(error) << "fcntl(F_SETFL) failed: Errno: " <<  strerror(err);
         return false;
     }
 #else
@@ -405,7 +401,7 @@ bool CTcpServer::SetNoBlocking(SOCKET socket) {
  * @retval 0 if failed
  * @retval The highest FD encountered 
  */
-int CTcpServer::BuildSelectList() {
+int TcpServer::BuildSelectList() {
     ClientList_t::iterator connection;
     SOCKET highestFd=m_ListenSocket;
 
@@ -433,7 +429,7 @@ int CTcpServer::BuildSelectList() {
  * Closes all the connections.
  * Call this function after stopping the server thread
  */
-void CTcpServer::CloseAllConnections(){    
+void TcpServer::CloseAllConnections(){    
     ClientList_t::iterator itClient;
 
     pthread_mutex_lock(&m_ClientListMutex); 
@@ -454,7 +450,7 @@ void CTcpServer::CloseAllConnections(){
  * @retval true Connection was closed.
  * @retval false Connection was not managed by this class
  */
-bool CTcpServer::CloseConnection(Handle_t handle) {
+bool TcpServer::CloseConnection(Handle_t handle) {
     ClientList_t::iterator itClient;
 
     pthread_mutex_lock(&m_ClientListMutex);
@@ -478,22 +474,20 @@ bool CTcpServer::CloseConnection(Handle_t handle) {
  * Calls the registered connection callback function
  * @param handle connection handle
  */
-void CTcpServer::CloseConnectionCallback(Handle_t handle) {
+void TcpServer::CloseConnectionCallback(Handle_t handle) {
 
     if(m_pConnectionCallback != NULL) {
         struct sockaddr_in clientAddr;
-        m_pConnectionCallback(Close,clientAddr,handle,m_pConntectionUser);
+        m_pConnectionCallback(Close,clientAddr,handle);
     }
 }
 
 /**
  * Registers a callback function for new data 
  * @param pCallback Pointer to Callback function
- * @param pUser Pointer to user provided pointer passed back into the callback function
  */
-void CTcpServer::RegisterDataCallback(DataCallback_t pCallback,void *pUser) {
+void TcpServer::RegisterDataCallback(DataCallback_t pCallback) {
     m_pNewDataCallback=pCallback;
-    m_pNewDataUser=pUser;
 }
 
 /**
@@ -501,9 +495,8 @@ void CTcpServer::RegisterDataCallback(DataCallback_t pCallback,void *pUser) {
  * @param pCallback Pointer to Callback function
  * @param pUser Pointer to user provided pointer passed back into the callback function
  */
-void CTcpServer::RegisterConnectionCallback(ConntectionCallback_t pCallback,void *pUser) {
+void TcpServer::RegisterConnectionCallback(ConntectionCallback_t pCallback) {
     m_pConnectionCallback=pCallback;
-    m_pConntectionUser=pUser;
 }
 
 
@@ -515,20 +508,20 @@ void CTcpServer::RegisterConnectionCallback(ConntectionCallback_t pCallback,void
  * @retval true if the send was successful
  * @retval false if the send failed or if we are not connected 
  */
-bool CTcpServer::SendToClient(Handle_t handle,unsigned char *pData,unsigned uLength) {
+bool TcpServer::SendToClient(Handle_t handle,unsigned char *pData,unsigned uLength) {
 
     //are we connected to this client
     pthread_mutex_lock(&m_ClientListMutex);
     if(m_ClientList.find(handle)== m_ClientList.end()) {
         pthread_mutex_unlock(&m_ClientListMutex);
-        PERROR1("handle %d doesnot exist\n",handle);
+        BOOST_LOG_TRIVIAL(error) << "handle " << handle << " doesnot exist";
         return false;
     }
     pthread_mutex_unlock(&m_ClientListMutex);
     //ship the data
     if(send(handle,(const char*)pData,uLength,0) == -1) {
         int err=errno;                
-        PERROR2("Failed to send data to handle %d. Errno: %d\n",handle,err);
+        BOOST_LOG_TRIVIAL(error) << "Failed to send data to handle " << handle << " " << strerror(err);
         return false;
     }
     return true;
@@ -539,7 +532,7 @@ bool CTcpServer::SendToClient(Handle_t handle,unsigned char *pData,unsigned uLen
  * @retval true Success
  * @retval false failure
  */
-bool CTcpServer::StartSeverThread(){
+bool TcpServer::StartSeverThread(){
 
     return ( pthread_create(&m_threadId,NULL,threadHelper,this) == 0);
 }
@@ -551,7 +544,7 @@ bool CTcpServer::StartSeverThread(){
  * @retval true Success
  * @retval false failure
  */
-bool CTcpServer::StopSeverThread(){
+bool TcpServer::StopSeverThread(){
 
     return (pthread_cancel(m_threadId) == 0);
 }
@@ -559,8 +552,8 @@ bool CTcpServer::StopSeverThread(){
 /**
  * Helper function for running the server thread
  */
-void *CTcpServer::threadHelper(void *pUser){
-    CTcpServer *pServer = (CTcpServer*)pUser;
+void *TcpServer::threadHelper(void *pUser){
+    TcpServer *pServer = (TcpServer*)pUser;
 
     pServer->start();
 

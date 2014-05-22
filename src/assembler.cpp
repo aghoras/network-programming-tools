@@ -2,27 +2,27 @@
  * This file implements a class that can assemble small packets
  * of data into one continuous buffer
  */
-#include "assembler.h"
+#include "BufferAssembler.h"
 #include <string.h>
 
 /**
  * Class constructor 
  */
-CAssembler::CAssembler() {
+BufferAssembler::BufferAssembler() {
     m_Size=0;
 }
 
 /**
  * Class destructor
  */
-CAssembler::~CAssembler() {
+BufferAssembler::~BufferAssembler() {
     Clear();
 }
 
 /**
  * Clear the block list and frees all the resources 
  */
-void CAssembler::Clear() {
+void BufferAssembler::Clear() {
     BlockList_t::iterator it;
     /** free all the blocks */
     for(it=m_Blocks.begin(); it != m_Blocks.end(); it++) {
@@ -40,7 +40,7 @@ void CAssembler::Clear() {
  * @return the new size of the list
  * @note Data will be copied from the input data buffer into internal structures 
  **/
-unsigned CAssembler::Append(const unsigned char *pData,unsigned length) {
+unsigned BufferAssembler::Append(const unsigned char *pData,unsigned length) {
     BlockInfo_t info={0};
 
     info.pBuffer=new unsigned char[length];
@@ -64,7 +64,7 @@ unsigned CAssembler::Append(const unsigned char *pData,unsigned length) {
  * @retval true if success
  * @retval false if offset or the size cannot be satisfied
  **/
-bool CAssembler::Peek(unsigned char *pBuffer,unsigned size,unsigned offset) {
+bool BufferAssembler::Peek(unsigned char *pBuffer,unsigned size,unsigned offset) {
     BlockList_t::iterator it,start,end;
     unsigned depth=0,startOffset,endOffset;
     unsigned nBytes=0,copyByteCount;
@@ -136,7 +136,7 @@ bool CAssembler::Peek(unsigned char *pBuffer,unsigned size,unsigned offset) {
  * @retval true if success
  * @retval false if size of bogus 
  **/
-bool CAssembler::Pop(unsigned char *pBuffer,unsigned size) {
+bool BufferAssembler::Pop(unsigned char *pBuffer,unsigned size) {
     if(Peek(pBuffer,size)) {
         Trim(size);
         return true;
@@ -148,7 +148,7 @@ bool CAssembler::Pop(unsigned char *pBuffer,unsigned size) {
  * Removes data from the head of the blocks 
  * @param[in] size number of byte to remove form the head of the list
  **/
-void CAssembler::Trim(unsigned size) {
+void BufferAssembler::Trim(unsigned size) {
     BlockList_t::iterator it,temp;
 
     m_Size=m_Size-size;

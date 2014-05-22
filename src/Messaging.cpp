@@ -6,15 +6,15 @@
  */
 
 #include "Messaging.h"
-#include "TRACE.h"
 #include <unistd.h>
+#include <boost/log/trivial.hpp>
 
 #define mSleep(x) (usleep(x*1000))
 
 /**
  * Default constructor
  */
-CMessaging::CMessaging() {
+Messaging::Messaging() {
     m_uSendRetry = SEND_RETRY;
     m_uSendRetryDelay = SEND_RETRY_DELAY;
 }
@@ -22,7 +22,7 @@ CMessaging::CMessaging() {
 /**
  * Class destructor
  */
-CMessaging::~CMessaging() {
+Messaging::~Messaging() {
 
 }
 
@@ -39,7 +39,7 @@ CMessaging::~CMessaging() {
  *  @retval true success
  *  @retval false if the message cannot be queued
  **/
-bool CMessaging::xmitWithRetry(const unsigned char *pBuffer, unsigned uLength) {
+bool Messaging::xmitWithRetry(const unsigned char *pBuffer, unsigned uLength) {
     unsigned bytesSent = 0;
     unsigned retryCounter;
     int results;
@@ -48,7 +48,7 @@ bool CMessaging::xmitWithRetry(const unsigned char *pBuffer, unsigned uLength) {
     while(retryCounter < m_uSendRetry){
         results = xmitMsg(pBuffer + bytesSent, uLength - bytesSent);
         if(results < 0){
-            PTRACE("Failed to transmit\n");
+            BOOST_LOG_TRIVIAL(trace) << "Failed to transmit";
             return false;
         }
         if (results == 0) {
@@ -65,7 +65,7 @@ bool CMessaging::xmitWithRetry(const unsigned char *pBuffer, unsigned uLength) {
             }
         }
     }
-    PTRACE("Xmit Retry timeout\n");
+    BOOST_LOG_TRIVIAL(trace) << "Xmit Retry timeout";
     return false;
 }
 
@@ -77,7 +77,7 @@ bool CMessaging::xmitWithRetry(const unsigned char *pBuffer, unsigned uLength) {
  * @retval true Message was sent successfully
  * @retval false Message was not sent successfully
  */
-bool CMessaging::sendMessage(const unsigned char* pBuffer, unsigned uLength) {
+bool Messaging::sendMessage(const unsigned char* pBuffer, unsigned uLength) {
     unsigned char header[HEADER_SIZE];
     unsigned char trailer[TRAILER_SIZE]={ETX};
 
@@ -110,7 +110,7 @@ bool CMessaging::sendMessage(const unsigned char* pBuffer, unsigned uLength) {
  * @retval true At least one message was received after processing chunk
  * @retval false No complete message was received after processing chunk
  */
-bool CMessaging::processChunk(unsigned char* pBuffer, unsigned uLength) {
+bool Messaging::processChunk(unsigned char* pBuffer, unsigned uLength) {
     unsigned char header[HEADER_SIZE];
     unsigned char trailer[TRAILER_SIZE];
     unsigned uMsgLength;
@@ -130,7 +130,7 @@ bool CMessaging::processChunk(unsigned char* pBuffer, unsigned uLength) {
         if(header[0]!=STX){
             //bad message or partial message
             //dump everything in the assember in an attempt to recover
-            PTRACE("Bad Start of message\n");
+            BOOST_LOG_TRIVIAL(trace) << "Bad Start of message";
             m_assembler.Clear();
             break;
         }
@@ -155,7 +155,7 @@ bool CMessaging::processChunk(unsigned char* pBuffer, unsigned uLength) {
             //oops! The trailer was not valid
             //dump the message
             delete[] msg.pData;
-            PTRACE("Found bad trailer\n");
+            BOOST_LOG_TRIVIAL(trace) << "Found bad trailer";
             break;
         }
         //put the message in the queue
@@ -171,7 +171,7 @@ bool CMessaging::processChunk(unsigned char* pBuffer, unsigned uLength) {
  * @return The size of the message at the beginning of the queue
  * @retval 0 If no messages are pending
  */
-unsigned CMessaging::getMsgSize() {
+unsigned Messaging::getMsgSize() {
     if(!m_MsgQueue.empty()){
         return m_MsgQueue.front().uMsgLength;
     }
@@ -185,7 +185,7 @@ unsigned CMessaging::getMsgSize() {
  * @note This pointer must be deleted by the caller after the message is
  * successfully processed.
  */
-CMessaging::Message_t CMessaging::getMsg() {
+Messaging::Message_t Messaging::getMsg() {
     Message_t msg;
 
     msg.pData=0;

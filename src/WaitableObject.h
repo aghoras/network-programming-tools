@@ -11,15 +11,15 @@
 #define _WATIABLEOBJECT_H
 
 #include <pthread.h>
-#include <pthread.h>
-#include "TRACE.h"
+#include <sys/time.h>
+#include <boost/log/trivial.hpp>
 /**
  * A template based waitable object
  * that can be used to signal between threads using
  * pthread_cond_wait or pthread_cond_wait_timeout
  */
 template<class T>
-class CWaitableObject {
+class WaitableObject {
 public:
     /** The object we are throwing */
     T m_Object;
@@ -28,7 +28,7 @@ public:
       * @param[in] pMutex_attr Mutex attributes
       * @param[in] pCond_attr Condition attributes
       */
-    CWaitableObject(const pthread_mutexattr_t *pMutex_attr, const pthread_condattr_t *pCond_attr) {
+    WaitableObject(const pthread_mutexattr_t *pMutex_attr, const pthread_condattr_t *pCond_attr) {
         pthread_mutex_init(&m_ClassMutex,0);
         pthread_mutex_init(&m_ConditionMutex, pMutex_attr);
         pthread_cond_init(&m_Condition, pCond_attr);
@@ -36,7 +36,7 @@ public:
         m_WaiterCount = 0;
     }
     /** default constructor */
-    CWaitableObject() {
+    WaitableObject() {
         pthread_mutex_init(&m_ClassMutex, NULL);
         pthread_mutex_init(&m_ConditionMutex, NULL);
         pthread_cond_init(&m_Condition, NULL);
@@ -44,12 +44,12 @@ public:
         m_WaiterCount = 0;
     }
     /** destructor */
-    ~CWaitableObject() {
+    ~WaitableObject() {
         pthread_mutex_destroy(&m_ClassMutex);
         pthread_mutex_destroy(&m_ConditionMutex);
         pthread_cond_destroy(&m_Condition);
     }
-    /** locks the mutes and returns the results of the lock operation
+    /** locks the mutex and returns the results of the lock operation
       * @return mutex lock operation results
       */
     int LockMutex() {
@@ -123,7 +123,7 @@ public:
         do {
             status = pthread_cond_timedwait(&m_Condition, &m_ConditionMutex, &timeout);
             if (status == 0 && m_bTriggered == false) {
-                PTRACE("!!!!!!!!Spurious wake up detected!!!!!!!!!!\n");
+                BOOST_LOG_TRIVIAL(trace) << "!!!!!!!!Spurious wake up detected!!!!!!!!!!\n";
             }
         } while ( status == 0 && m_bTriggered == false);
 

@@ -52,7 +52,7 @@ Handle_List<T>::Handle_List(unsigned int uSize){
 template<class T>
 Handle_List<T>::~Handle_List(){
    //free data memory
-   delete m_Data;
+   delete [] m_Data;
    m_FreeHandle_List.clear();
    m_uCount=0;
 }

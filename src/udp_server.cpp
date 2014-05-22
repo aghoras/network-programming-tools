@@ -47,7 +47,7 @@ using namespace std;
  * Class constructor
  * @param uPort The port to receive on
  */
-CUdpServer::CUdpServer(unsigned uPort)
+UdpServer::UdpServer(unsigned uPort)
 {
     m_uPort=uPort;
     m_bBiDirectional = false;
@@ -62,7 +62,7 @@ CUdpServer::CUdpServer(unsigned uPort)
  * @param uReceivePort The port to receive on
  * @param serverAddress The address of the server to connect to
  */
-CUdpServer::CUdpServer(unsigned uSendPort,string serverAddr,unsigned uReceivePort)
+UdpServer::UdpServer(unsigned uSendPort,string serverAddr,unsigned uReceivePort)
 {
     struct sockaddr_in sin;
 
@@ -93,7 +93,7 @@ CUdpServer::CUdpServer(unsigned uSendPort,string serverAddr,unsigned uReceivePor
     BOOST_LOG_TRIVIAL(trace) << "Done with client initialization";
 }
 
-CUdpServer::~CUdpServer(void)
+UdpServer::~UdpServer(void)
 {
     if(m_Socket != -1){
         shutdown(m_Socket,SHUT_RDWR);
@@ -112,12 +112,13 @@ CUdpServer::~CUdpServer(void)
  * @retval true Success
  * @retval false failure
  */
-bool CUdpServer::SendToClient(const unsigned char *pData,unsigned uLength) const{
+bool UdpServer::SendToClient(const unsigned char *pData,unsigned uLength) const{
     if(m_bBiDirectional == false){
-        BOOST_LOG_TRIVIAL(error) << "Cannot send data to unidirectional client\n";
+        BOOST_LOG_TRIVIAL(error) << "Cannot send data to unidirectional client";
     }
 
     if(send(m_Socket,(char*)pData,uLength,0) < 0){
+        BOOST_LOG_TRIVIAL(error) << "UdpServer SendToClient failed: " << strerror(errno);
         return false;
     }
 
@@ -129,7 +130,7 @@ bool CUdpServer::SendToClient(const unsigned char *pData,unsigned uLength) const
  * @retval true Success
  * @retval false failure
  */
-bool CUdpServer::initServer(){
+bool UdpServer::initServer(){
     struct sockaddr_in sin;
     
     
@@ -200,7 +201,7 @@ bool CUdpServer::initServer(){
  * @param pCallback Pointer to Callback function
  * @param pUser Pointer to user provided pointer passed back into the callback function
  */
-void CUdpServer::RegisterDataCallback(DataCallback_t pCallback){
+void UdpServer::RegisterDataCallback(DataCallback_t pCallback){
     m_pNewDataCallback=pCallback;
 }
 
@@ -209,13 +210,15 @@ void CUdpServer::RegisterDataCallback(DataCallback_t pCallback){
  * @retval true sucess
  * @retval false failure
  */
-bool CUdpServer::start(){
+bool UdpServer::start(){
     std::time_t now=time(0);
     unsigned char buffer[64*1024];
     int buffer_length=sizeof(buffer);
     int nResults=0;
+    string sNow( ctime( &now ) );
 
-    BOOST_LOG_TRIVIAL(trace) <<  "Server on port " << m_uPort << " started at " << ctime(&now);
+    //drop the newline in ctime
+    BOOST_LOG_TRIVIAL(trace) <<  "UDP Server on port " << m_uPort << " started at " << sNow.substr(0,sNow.length()-1);
     //do we have good socket to listen over
     if(m_Socket == -1) {
         //bad socket
@@ -250,14 +253,14 @@ bool CUdpServer::start(){
 /** 
  * This function starts a thread and calls the start function 
  */
-bool CUdpServer::StartServerThread(){
+bool UdpServer::StartServerThread(){
     return ( pthread_create(&m_threadId,NULL,udp_server_thread_helper,this) == 0);
 }
 
 /**
  * This function stops the server thread 
  */
-bool CUdpServer::StopServerThread(){     
+bool UdpServer::StopServerThread(){     
     return (pthread_cancel(m_threadId) == 0);
 }
 
@@ -267,7 +270,7 @@ bool CUdpServer::StopServerThread(){
  * @return not used
  */
 void * udp_server_thread_helper(void *pUser){
-    CUdpServer *pServer = (CUdpServer*)pUser;
+    UdpServer *pServer = (UdpServer*)pUser;
 
     pServer->start();
 

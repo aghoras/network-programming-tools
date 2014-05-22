@@ -10,11 +10,12 @@
 
 #include <pthread.h>
 #include <map>
+#include <boost/function.hpp>
 
 extern "C" void * ThreadHelper(void *);
 
 /** class encapsulating the server behavior */
-class CTcpServer {
+class TcpServer {
 public:
     /** connection state */
     typedef enum {New,Close} ConnectionState_t;
@@ -32,28 +33,27 @@ public:
      *  state : indicates whether this connection is being establised or closed
      *  clientAddr: address of the client. This variable is only valid for new connections
      *  handle: handle for this connection
-     *  pUser: pointer passed in during registration 
      *  retval: true Connection should be accepted
      *  retval: false Connection should be rejected
      **/
-    typedef bool (*ConntectionCallback_t)(ConnectionState_t state,const struct sockaddr_in &clientAddr,Handle_t handle,void *pUser);
+    typedef boost::function<bool(ConnectionState_t state,const struct sockaddr_in &clientAddr,Handle_t handle)> ConntectionCallback_t;
+
     /**
      *   uHandle: handle for this connection
      *   pData: pointer to data buffer 
      *   uLength : Length of the data buffer
-     *   pUser: pointer passed in during registration 
      **/
-    typedef void (*DataCallback_t)(Handle_t handle,unsigned char *pData, unsigned uLength,void *pUser);
+    typedef boost::function<void(Handle_t handle,unsigned char*,unsigned)> DataCallback_t;
     /** @brief starts the server */
     bool start();
     /** @brief Class constructor */
-    CTcpServer(unsigned uPort);
+    TcpServer(unsigned uPort);
     /** @brief class destructor */
-    ~CTcpServer();
+    ~TcpServer();
     /** @brief register a callback function for connection state change */
-    void RegisterConnectionCallback(ConntectionCallback_t pCallback,void *pUser);
+    void RegisterConnectionCallback(ConntectionCallback_t pCallback);
     /** @brief registers a callback function for data reception */
-    void RegisterDataCallback(DataCallback_t pCallback,void *pUser);
+    void RegisterDataCallback(DataCallback_t pCallback);
     /** @brief Closes an open connection */
     bool CloseConnection(Handle_t handle);
     void CloseAllConnections();
@@ -85,10 +85,6 @@ protected:
     ConntectionCallback_t m_pConnectionCallback;
     /** new data callback function */
     DataCallback_t m_pNewDataCallback;
-    /** place to store users pointer to new data callbacks */
-    void * m_pNewDataUser;
-    /** place to store users pointer to connection callbacks */
-    void * m_pConntectionUser;
     /** thread id of the server thread */
     pthread_t m_threadId;
 

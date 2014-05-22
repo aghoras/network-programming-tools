@@ -6,10 +6,10 @@
 #define ASSEMBLER_H_
 
 #include <list>
-class CAssembler {
+class BufferAssembler {
 public:
-    CAssembler();
-    virtual ~CAssembler();
+    BufferAssembler();
+    virtual ~BufferAssembler();
     /** @brief clears the internal buffers */
     void Clear();
     /** @brief returns the total number of bytes held by this instance */

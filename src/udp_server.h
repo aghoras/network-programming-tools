@@ -18,23 +18,23 @@ extern "C" void * udp_server_thread_helper(void *);
  * Notes on creating a callback:
  * 1)Create a class member (could be of any access type)
  *  eg. protected: incomingDataCallback(unsigned char *pData, unsigned uLength);
- * 2)Call the CUdpServer::RegisterCallback
+ * 2)Call the UdpServer::RegisterCallback
  *  e.g  m_UdpServer.RegisterDataCallback(boost::bind(&CIpChannel::incomingDataCallback, this,_1,_2));
  * 3)It is possible to bind additional variables to the callback function during registration via
  *   a the boost::bind function. These variables will be passed back into the callback function
  */
-class CUdpServer
+class UdpServer
 {
 public:
 	/** @brief Class constructor */
-	CUdpServer(unsigned uPort);
+	UdpServer(unsigned uPort);
     /** @brief constructor used for bi directional connected UDP sockets */
-    CUdpServer(unsigned uSendPort,std::string serverAddr,unsigned uReceivePort);
+    UdpServer(unsigned uSendPort,std::string serverAddr,unsigned uReceivePort);
     /** @brief Sends data to bi-directional client */
     bool SendToClient(const unsigned char *pData,unsigned length) const;
     
 	/** @brief Class destructor */
-	~CUdpServer(void);
+	~UdpServer(void);
 
 	 /**
      *   pData: pointer to data buffer 

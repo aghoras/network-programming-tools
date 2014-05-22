@@ -7,8 +7,9 @@
 #include <pthread.h>
 #include <math.h>
 #include "WaitableObject.h"
-#include "Lists.h"
+#include "HandleList.h"
 #include <limits>
+#include <boost/shared_ptr.hpp>
 #ifdef WIN32
 #   include <windows.h>
 #else
@@ -27,14 +28,14 @@
 * This class defines a series of functions to 
 * create timers that can trigger events
 */
-class CTimer
+class Timer
 {
 public:
     typedef void (*pTimer_Callback_t)(unsigned hTimer,void *hParam);
     typedef enum {TimerActive,TimerSuspended} State_t;
 
-    CTimer(void);
-    ~CTimer(void);
+    Timer(void);
+    ~Timer(void);
     /** Handle for invalid timers */
     enum {INVALID_HANDLE=0xFFFFFFFF};
     /** Maximum number of timer this class can handle */
@@ -55,9 +56,10 @@ public:
     static struct timespec diff_timespec(const struct timespec &a, const struct timespec &b);
     static unsigned long timespec2ms(const struct timespec &a);
 
+
 protected:
     /** timer information */
-    typedef struct TIMER_INFO_STRUCT{
+    struct TimerInfo_t{
         timespec                   ExpiredTime;
         timespec                   interval;
         State_t                    TimerState;
@@ -65,16 +67,17 @@ protected:
         bool                       bAutoReset;
         void*                      pUser;
         unsigned                   hTimer;
-        struct TIMER_INFO_STRUCT   **pHeapContainer;
-    }TimerInfo_t;
+        boost::shared_ptr<TimerInfo_t*> pHeapContainer;
+    };
+    typedef  boost::shared_ptr<TimerInfo_t*>  pHeapContainer_t;
 
     //queue stl compare class
     class CompareTimerInfo{
     public:
-        bool operator()(TimerInfo_t** x,TimerInfo_t** y);
+        bool operator()(pHeapContainer_t x, pHeapContainer_t y);
     };
     //list of pending active timers
-    typedef std::priority_queue<TimerInfo_t**,std::vector<TimerInfo_t**>,CompareTimerInfo> TimerQueue;
+    typedef std::priority_queue<pHeapContainer_t,std::vector<pHeapContainer_t>,CompareTimerInfo> TimerQueue;
     typedef std::map<unsigned,int*> SUSPEND_COUNT_MAP;
 
     pthread_t m_timerServiceThreadId;
@@ -82,16 +85,16 @@ protected:
     bool m_bThreadExited; //set to true when the service thread exists
     pthread_mutex_t m_TimerListMutex;
     //TimerQueue m_ActiveTimerQueue;
-    CWaitableObject<TimerQueue> m_ActiveTimerQueue;
+    WaitableObject<TimerQueue> m_ActiveTimerQueue;
     //a safe list of the all the timers
-    Handle_List<TimerInfo_t>  m_TimerList;
+    Handle_List<Timer::TimerInfo_t>  m_TimerList;
 
     void* timerServiceFunc();
 
-    friend void* CTimer_Thread_Helper(void *pUser);
+    friend void* Timer_Thread_Helper(void *pUser);
 };
 
-void* CTimer_Thread_Helper(void *pUser);
+void* Timer_Thread_Helper(void *pUser);
 
 #endif //_WATCH_DOG_TIMER_H
 

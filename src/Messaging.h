@@ -10,14 +10,14 @@
 #include <string>
 #include <queue>
 
-#include "assembler.h"
+#include "BufferAssembler.h"
 /**
  * This class encapsulates the task of sending
  * and receiving messages over a streaming interface.
  * This class should serve as the base class
  * for concrete message classes.
  */
-class CMessaging {
+class Messaging {
 public:
     /** used to hold complete messages */
     typedef struct {
@@ -35,10 +35,10 @@ protected:
     /** message queue */
     typedef std::queue <Message_t> MessageQueue_t;
 
-    CAssembler     m_assembler;       /**< used to assemble data fragments */
-    unsigned       m_uSendRetry;      /**< number of times to retry before giving up on sends */
-    unsigned       m_uSendRetryDelay; /**< number of milliseconds to delay between send retries */
-    MessageQueue_t m_MsgQueue;        /**< hold a list of completely received messages */
+    BufferAssembler m_assembler;       /**< used to assemble data fragments */
+    unsigned         m_uSendRetry;      /**< number of times to retry before giving up on sends */
+    unsigned         m_uSendRetryDelay; /**< number of milliseconds to delay between send retries */
+    MessageQueue_t   m_MsgQueue;        /**< hold a list of completely received messages */
 
     /** low level transmit function
      *  @param pBuffer pointer to the message contents to be sent. If this is a
@@ -54,8 +54,8 @@ protected:
     bool xmitWithRetry(const unsigned char *pBuffer, unsigned uLength);
 
 public:
-    CMessaging();
-    virtual ~CMessaging();
+    Messaging();
+    virtual ~Messaging();
     /** @brief sends a message to remote end */
     bool  sendMessage(const unsigned char *pMsg,unsigned uLength);
     /** @brief adds a chunk of data to internal buffer in order to extract message */
