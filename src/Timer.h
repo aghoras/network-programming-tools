@@ -16,13 +16,15 @@
 # include <sys/time.h>
 #endif
 
-#ifndef BILLION
-# define BILLION 1000000000
-#endif
 
 #ifndef MILLION
-# define MILLION 1000000
+# define MILLION 1000000L
 #endif
+
+#ifndef BILLION
+# define BILLION (1000*MILLION)
+#endif
+
 
 /** 
 * This class defines a series of functions to 

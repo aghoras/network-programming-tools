@@ -9,13 +9,13 @@
 #include "gtest.h"
 #include "tcp_server.h"
 #include "tcp_messaging.h"
+#include <boost/bind.hpp>
 
 
 /**
  * This function is used to forward received data back to the message handler
  */
- static void helperFunction(CTcpServer::Handle_t handle,unsigned char *pData, unsigned uLength,void *pUser){
-     CTcpMessaging *pDest=(CTcpMessaging *) pUser;
+ static void helperFunction(CTcpMessaging *pDest,TcpServer::Handle_t handle,unsigned char *pData, unsigned uLength){
 
      pDest->processChunk(pData,uLength);
  }
@@ -28,11 +28,11 @@ TEST(TcpMessaging,general){
     const unsigned uPort=9450;
     const char *pTestMessage="Oh let the sun beat down upon my face, stars to fill my dream";
     CTcpMessaging src,dest;
-    CTcpServer server(uPort);
-    CMessaging::Message_t message;
+    TcpServer server(uPort);
+    Messaging::Message_t message;
 
     //start the server
-    server.RegisterDataCallback(helperFunction,&dest);
+    server.RegisterDataCallback(boost::bind(helperFunction,&dest,_1,_2,_3));
     ASSERT_TRUE(server.StartSeverThread());
     sleep(1);
 

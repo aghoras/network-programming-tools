@@ -11,7 +11,7 @@
 #include "Messaging.h"
 #include <string.h>
 
-class CTcpMessaging: public CMessaging {
+class CTcpMessaging: public Messaging {
 protected:
     std::string m_sIpAddress;
     unsigned    m_uPortNumber;

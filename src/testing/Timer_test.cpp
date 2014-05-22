@@ -2,7 +2,7 @@
  * @file Timer_test.cpp
  *
  * This file defines the unit tests for verifying the operation
- * of the CTimer class
+ * of the Timer class
  *
  * @date   Mar 17, 2014
  * @author ali
@@ -84,7 +84,7 @@ TEST(Timer,diff_timespec){
     a.tv_nsec=0;
     b.tv_sec=0;
     b.tv_nsec=0;
-    c=CTimer::diff_timespec(a,b);
+    c=Timer::diff_timespec(a,b);
     EXPECT_EQ(c.tv_sec,0);
     EXPECT_EQ(c.tv_nsec,0);
 
@@ -93,7 +93,7 @@ TEST(Timer,diff_timespec){
     a.tv_nsec=BILLION-1;
     b.tv_sec=0;
     b.tv_nsec=BILLION-1;
-    c=CTimer::diff_timespec(a,b);
+    c=Timer::diff_timespec(a,b);
     EXPECT_EQ(c.tv_sec,0);
     EXPECT_EQ(c.tv_nsec,0);
 
@@ -101,7 +101,7 @@ TEST(Timer,diff_timespec){
     a.tv_nsec=0;
     b.tv_sec=0;
     b.tv_nsec=BILLION-1;
-    c=CTimer::diff_timespec(a,b);
+    c=Timer::diff_timespec(a,b);
     EXPECT_EQ(c.tv_sec,0);
     EXPECT_EQ(c.tv_nsec,1);
 
@@ -109,7 +109,7 @@ TEST(Timer,diff_timespec){
     a.tv_nsec=0;
     b.tv_sec=1;
     b.tv_nsec=0;
-    c=CTimer::diff_timespec(a,b);
+    c=Timer::diff_timespec(a,b);
     EXPECT_EQ(c.tv_sec,0);
     EXPECT_EQ(c.tv_nsec,0);
 
@@ -117,7 +117,7 @@ TEST(Timer,diff_timespec){
     a.tv_nsec=0;
     b.tv_sec=1;
     b.tv_nsec=0;
-    c=CTimer::diff_timespec(a,b);
+    c=Timer::diff_timespec(a,b);
     EXPECT_EQ(c.tv_sec,1);
     EXPECT_EQ(c.tv_nsec,0);
 
@@ -125,7 +125,7 @@ TEST(Timer,diff_timespec){
     a.tv_nsec=0;
     b.tv_sec=0;
     b.tv_nsec=1;
-    c=CTimer::diff_timespec(a,b);
+    c=Timer::diff_timespec(a,b);
     EXPECT_EQ(c.tv_sec,0);
     EXPECT_EQ(c.tv_nsec,BILLION-1);
 
@@ -133,7 +133,7 @@ TEST(Timer,diff_timespec){
     a.tv_nsec=400000000;
     b.tv_sec=0;
     b.tv_nsec=900000000;
-    c=CTimer::diff_timespec(a,b);
+    c=Timer::diff_timespec(a,b);
     EXPECT_EQ(c.tv_sec,0);
     EXPECT_EQ(c.tv_nsec,500000000);
 }
@@ -141,7 +141,7 @@ TEST(Timer,diff_timespec){
 static void basicTimerCallback(unsigned id,void *pUser){
     CTimeList *pTimeList=( CTimeList *) pUser;
     timespec now;
-    CTimer::getTime(now);
+    Timer::getTime(now);
 
     pTimeList->push_back(now);
 }
@@ -150,7 +150,7 @@ static void basicTimerCallback(unsigned id,void *pUser){
  * Single Timer Tests
  */
 TEST(Timer,singleTimer){
-    CTimer timer;
+    Timer timer;
     timespec start_time,delta;
     unsigned int timer1;
     CTimeList  timeList; // a list of times that the timer was invoked
@@ -160,9 +160,9 @@ TEST(Timer,singleTimer){
     std::list<timespec>::iterator it,last_it;
     std::list<timespec> tempTimeList;
 
-    CTimer::getTime(start_time);    ;
+    Timer::getTime(start_time);    ;
     timer1=timer.CreateTimer(testIntervalMs,basicTimerCallback,&timeList);
-    ASSERT_NE(timer1,CTimer::INVALID_HANDLE);
+    ASSERT_NE(timer1,Timer::INVALID_HANDLE);
 
     mSleep(testIntervalMs*(numTestEnvents+2));
 
@@ -180,8 +180,8 @@ TEST(Timer,singleTimer){
         last_it=it;
         it++;
         if(it!=tempTimeList.end()){
-            delta=CTimer::diff_timespec(*it,*last_it);
-            EXPECT_NEAR(CTimer::timespec2ms(delta),testIntervalMs,MaxAllowedError);
+            delta=Timer::diff_timespec(*it,*last_it);
+            EXPECT_NEAR(Timer::timespec2ms(delta),testIntervalMs,MaxAllowedError);
         }
     }while(it!=tempTimeList.end());
 }
@@ -193,8 +193,8 @@ TEST(Timer,singleTimer){
                        last_it=it;                                                   \
                        it++;                                                         \
                        if(it!=l.end()){                                              \
-                           delta=CTimer::diff_timespec(*it,*last_it);                \
-                           EXPECT_NEAR(CTimer::timespec2ms(delta),e,MaxAllowedError);\
+                           delta=Timer::diff_timespec(*it,*last_it);                \
+                           EXPECT_NEAR(Timer::timespec2ms(delta),e,MaxAllowedError);\
                        }                                                             \
                    }while(it!=l.end());                                              \
 
@@ -203,7 +203,7 @@ TEST(Timer,singleTimer){
  *
  */
 TEST(Timer,multipleTimers) {
-    CTimer timerManager;
+    Timer timerManager;
     timespec start_time, delta;
     const unsigned nTimers = 8;
     unsigned int timer[nTimers];
@@ -214,10 +214,10 @@ TEST(Timer,multipleTimers) {
     std::list<timespec>::iterator it, last_it;
     std::list<timespec> tempTimeList;
 
-    CTimer::getTime(start_time);
+    Timer::getTime(start_time);
     for (unsigned idxTimer = 0; idxTimer < nTimers; idxTimer++) {
         timer[idxTimer] = timerManager.CreateTimer(testIntervalMs[idxTimer], basicTimerCallback, &timeList[idxTimer]);
-        ASSERT_NE(timer[idxTimer], CTimer::INVALID_HANDLE);
+        ASSERT_NE(timer[idxTimer], Timer::INVALID_HANDLE);
     }
     mSleep(testIntervalMs[nTimers - 1] * (numTestEnvents + 1));
 
@@ -243,7 +243,7 @@ TEST(Timer,multipleTimers) {
  */
 TEST(Timer,lateCreation) {
     const unsigned nTimers = 2;
-    CTimer timerManager;
+    Timer timerManager;
     timespec start_time[nTimers], delta;
     unsigned safety_counter;
     unsigned max_saftey_counter=10000;
@@ -254,14 +254,14 @@ TEST(Timer,lateCreation) {
     const unsigned MaxAllowedError = 1; //number of allowed timer error
     std::list<timespec> tempTimeList;
 
-    CTimer::getTime(start_time[0]);
+    Timer::getTime(start_time[0]);
     timer[0]=timerManager.CreateTimer(testIntervalMs[0],basicTimerCallback,&timeList[0]);
     mSleep(200); //wait a little
     //there should be no pending events
     EXPECT_TRUE(timeList[0].empty());
     EXPECT_TRUE(timeList[1].empty());
 
-    CTimer::getTime(start_time[1]);
+    Timer::getTime(start_time[1]);
     timer[1]=timerManager.CreateTimer(testIntervalMs[1],basicTimerCallback,&timeList[1]);
     //still, there should be no events
     EXPECT_TRUE(timeList[0].empty());
@@ -278,8 +278,8 @@ TEST(Timer,lateCreation) {
     EXPECT_FALSE(timeList[1].empty());
     EXPECT_EQ(timeList[1].size(),(unsigned)1);
     tempTimeList = timeList[1].get_list();
-    delta = CTimer::diff_timespec(tempTimeList.front(),start_time[1]);
-    EXPECT_NEAR(CTimer::timespec2ms(delta),testIntervalMs[1],MaxAllowedError);
+    delta = Timer::diff_timespec(tempTimeList.front(),start_time[1]);
+    EXPECT_NEAR(Timer::timespec2ms(delta),testIntervalMs[1],MaxAllowedError);
     EXPECT_TRUE(timerManager.IsTimerActive(timer[1]));
     timerManager.StopTimer(timer[1]);
     EXPECT_FALSE(timerManager.IsTimerActive(timer[1]));
@@ -296,8 +296,8 @@ TEST(Timer,lateCreation) {
     EXPECT_EQ(timeList[1].size(),(unsigned)1);
 
     tempTimeList = timeList[0].get_list();
-    delta = CTimer::diff_timespec(tempTimeList.front(),start_time[0]);
-    EXPECT_NEAR(CTimer::timespec2ms(delta),testIntervalMs[0],MaxAllowedError);
+    delta = Timer::diff_timespec(tempTimeList.front(),start_time[0]);
+    EXPECT_NEAR(Timer::timespec2ms(delta),testIntervalMs[0],MaxAllowedError);
 
 }
 
@@ -308,7 +308,7 @@ TEST(Timer,lateCreation) {
  */
 TEST(Timer,oneShot) {
     const unsigned nTimers = 2;
-    CTimer timerManager;
+    Timer timerManager;
     timespec start_time[nTimers], delta;
 
     unsigned int timer[nTimers];
@@ -319,16 +319,16 @@ TEST(Timer,oneShot) {
     unsigned safety_counter;
     unsigned max_saftey_counter=10000;
 
-    CTimer::getTime(start_time[0]);
-    timer[0] = timerManager.CreateTimer(testIntervalMs[0], basicTimerCallback, &timeList[0],CTimer::TimerActive,false);
+    Timer::getTime(start_time[0]);
+    timer[0] = timerManager.CreateTimer(testIntervalMs[0], basicTimerCallback, &timeList[0],Timer::TimerActive,false);
     mSleep(200); //wait a little
     //there should be no pending events
     EXPECT_TRUE(timeList[0].empty());
     EXPECT_TRUE(timeList[1].empty());
     EXPECT_TRUE(timerManager.IsTimerActive(timer[0]));
 
-    CTimer::getTime(start_time[1]);
-    timer[1] = timerManager.CreateTimer(testIntervalMs[1], basicTimerCallback, &timeList[1],CTimer::TimerActive,false);
+    Timer::getTime(start_time[1]);
+    timer[1] = timerManager.CreateTimer(testIntervalMs[1], basicTimerCallback, &timeList[1],Timer::TimerActive,false);
     //still, there should be no events
     EXPECT_TRUE(timeList[0].empty());
     EXPECT_TRUE(timeList[1].empty());
@@ -346,8 +346,8 @@ TEST(Timer,oneShot) {
     EXPECT_FALSE(timeList[1].empty());
     EXPECT_EQ(timeList[1].size(), (unsigned )1);
     tempTimeList = timeList[1].get_list();
-    delta = CTimer::diff_timespec(tempTimeList.front(), start_time[1]);
-    EXPECT_NEAR(CTimer::timespec2ms(delta), testIntervalMs[1], MaxAllowedError);
+    delta = Timer::diff_timespec(tempTimeList.front(), start_time[1]);
+    EXPECT_NEAR(Timer::timespec2ms(delta), testIntervalMs[1], MaxAllowedError);
 
     //wait for the long timer to trip
     safety_counter=0;
@@ -361,8 +361,8 @@ TEST(Timer,oneShot) {
     EXPECT_EQ(timeList[1].size(), (unsigned )1);
 
     tempTimeList = timeList[0].get_list();
-    delta = CTimer::diff_timespec(tempTimeList.front(), start_time[0]);
-    EXPECT_NEAR(CTimer::timespec2ms(delta), testIntervalMs[0], MaxAllowedError);
+    delta = Timer::diff_timespec(tempTimeList.front(), start_time[0]);
+    EXPECT_NEAR(Timer::timespec2ms(delta), testIntervalMs[0], MaxAllowedError);
 
 }
 
@@ -373,7 +373,7 @@ TEST(Timer,oneShot) {
  */
 TEST(Timer,oneShotRestart) {
     const unsigned nTimers = 1;
-    CTimer timerManager;
+    Timer timerManager;
     timespec start_time[nTimers], delta;
     unsigned int timer[nTimers];
     CTimeList timeList[nTimers]; // a list of times that the timer was invoked
@@ -383,8 +383,8 @@ TEST(Timer,oneShotRestart) {
     unsigned safety_counter;
     unsigned max_saftey_counter=10000;
 
-    CTimer::getTime(start_time[0]);
-    timer[0] = timerManager.CreateTimer(testIntervalMs[0], basicTimerCallback, &timeList[0],CTimer::TimerActive,false);
+    Timer::getTime(start_time[0]);
+    timer[0] = timerManager.CreateTimer(testIntervalMs[0], basicTimerCallback, &timeList[0],Timer::TimerActive,false);
     mSleep(testIntervalMs[0]/2 ); //wait a little
     //there should be no pending events
     EXPECT_TRUE(timeList[0].empty());
@@ -399,8 +399,8 @@ TEST(Timer,oneShotRestart) {
     EXPECT_EQ(timeList[0].size(), (unsigned )1);
 
     tempTimeList = timeList[0].get_list();
-    delta = CTimer::diff_timespec(tempTimeList.front(), start_time[0]);
-    EXPECT_NEAR(CTimer::timespec2ms(delta), testIntervalMs[0], MaxAllowedError);
+    delta = Timer::diff_timespec(tempTimeList.front(), start_time[0]);
+    EXPECT_NEAR(Timer::timespec2ms(delta), testIntervalMs[0], MaxAllowedError);
 
     //wait a little to make sure the timer is not starting
     mSleep(testIntervalMs[0]*3 );
@@ -409,7 +409,7 @@ TEST(Timer,oneShotRestart) {
 
     //restart the timer
     timeList[0].clear();
-    CTimer::getTime(start_time[0]);
+    Timer::getTime(start_time[0]);
     timerManager.RestartTimer(timer[0]);
     safety_counter=0;
     while (timeList[0].empty() && safety_counter++ < max_saftey_counter) {
@@ -418,21 +418,21 @@ TEST(Timer,oneShotRestart) {
     EXPECT_FALSE(timerManager.IsTimerActive(timer[0]));
     EXPECT_EQ(timeList[0].size(), (unsigned )1);
     tempTimeList = timeList[0].get_list();
-    delta = CTimer::diff_timespec(tempTimeList.front(), start_time[0]);
-    EXPECT_NEAR(CTimer::timespec2ms(delta), testIntervalMs[0], MaxAllowedError);
+    delta = Timer::diff_timespec(tempTimeList.front(), start_time[0]);
+    EXPECT_NEAR(Timer::timespec2ms(delta), testIntervalMs[0], MaxAllowedError);
 
 
 }
 
 TEST(Timer,deleteTimer) {
     const unsigned nTimers = 1;
-    CTimer timerManager;
+    Timer timerManager;
     unsigned int timer[nTimers];
     CTimeList timeList[nTimers]; // a list of times that the timer was invoked
     const unsigned testIntervalMs[nTimers] = { 100 };  // how far apart should the tests be scheduled
 
 
-    timer[0] = timerManager.CreateTimer(testIntervalMs[0], basicTimerCallback, &timeList[0],CTimer::TimerActive,false);
+    timer[0] = timerManager.CreateTimer(testIntervalMs[0], basicTimerCallback, &timeList[0],Timer::TimerActive,false);
     mSleep(testIntervalMs[0]/2 ); //wait a little
     //there should be no pending events
     EXPECT_TRUE(timeList[0].empty());
@@ -448,13 +448,13 @@ TEST(Timer,deleteTimer) {
 
 TEST(Timer,stopTimer) {
     const unsigned nTimers = 1;
-    CTimer timerManager;
+    Timer timerManager;
     unsigned int timer[nTimers];
     CTimeList timeList[nTimers]; // a list of times that the timer was invoked
     const unsigned testIntervalMs[nTimers] = { 100 };  // how far apart should the tests be scheduled
 
 
-    timer[0] = timerManager.CreateTimer(testIntervalMs[0], basicTimerCallback, &timeList[0],CTimer::TimerActive,false);
+    timer[0] = timerManager.CreateTimer(testIntervalMs[0], basicTimerCallback, &timeList[0],Timer::TimerActive,false);
     mSleep(testIntervalMs[0]/2 ); //wait a little
     //there should be no pending events
     EXPECT_TRUE(timeList[0].empty());
@@ -474,7 +474,7 @@ TEST(Timer,stopTimer) {
  *
  */
 TEST(Timer,dumpFunctions) {
-    CTimer timerManager;
+    Timer timerManager;
     const unsigned nTimers = 8;
     unsigned int timer[nTimers];
     CTimeList timeList[nTimers]; // a list of times that the timer was invoked
@@ -483,7 +483,7 @@ TEST(Timer,dumpFunctions) {
 
     for (unsigned idxTimer = 0; idxTimer < nTimers; idxTimer++) {
         timer[idxTimer] = timerManager.CreateTimer(testIntervalMs[idxTimer], basicTimerCallback, &timeList[idxTimer]);
-        ASSERT_NE(timer[idxTimer], CTimer::INVALID_HANDLE);
+        ASSERT_NE(timer[idxTimer], Timer::INVALID_HANDLE);
     }
     mSleep(testIntervalMs[nTimers - 1] * (numTestEnvents + 1));
 

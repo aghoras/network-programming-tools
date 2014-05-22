@@ -35,7 +35,7 @@ protected:
     /** message queue */
     typedef std::queue <Message_t> MessageQueue_t;
 
-    BufferAssembler m_assembler;       /**< used to assemble data fragments */
+    BufferAssembler  m_assembler;       /**< used to assemble data fragments */
     unsigned         m_uSendRetry;      /**< number of times to retry before giving up on sends */
     unsigned         m_uSendRetryDelay; /**< number of milliseconds to delay between send retries */
     MessageQueue_t   m_MsgQueue;        /**< hold a list of completely received messages */

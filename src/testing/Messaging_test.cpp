@@ -17,9 +17,9 @@
  * Used to test messaging on a medium that
  * can handle all the data
  */
-class transmitsAll:public CMessaging{
+class transmitsAll:public Messaging{
 protected:
-    CAssembler m_transmittedData; //this holds the the data we get
+    BufferAssembler m_transmittedData; //this holds the the data we get
 
     virtual int xmitMsg(const unsigned char *pBuffer, unsigned uLength){
         m_transmittedData.Append(pBuffer,uLength);
@@ -46,9 +46,9 @@ public:
  * Used to test messaging on a medium that can
  * support very small chunks of data
  */
-class partialTransmitter: public CMessaging{
+class partialTransmitter: public Messaging{
 protected:
-    CAssembler m_transmittedData; //this holds the the data we get
+    BufferAssembler m_transmittedData; //this holds the the data we get
     enum {PACKET_SIZE=4}; //number of bytes per packet
     unsigned m_NumPackets; //number of packets recieved so far
     unsigned m_FailedPacketInterval; //how often force a queue full condition
@@ -112,7 +112,7 @@ TEST(fullTransmiter,simpleTransmitTest){
     const char *szTestMsg="Hello world";
     unsigned char transmitBuffer[messageLength];
     unsigned char *pRawData;
-    CMessaging::Message_t msg;
+    Messaging::Message_t msg;
     unsigned rawDataSize;
 
     strncpy((char*)transmitBuffer,szTestMsg,messageLength);
@@ -151,7 +151,7 @@ TEST(fullTransmiter,multipleSimpleTransmitTest){
     const char *szTestMsg2="I'm a traveler of both time and space";
     unsigned char transmitBuffer[messageLength];
     unsigned char *pRawData;
-    CMessaging::Message_t msg;
+    Messaging::Message_t msg;
     unsigned rawDataSize;
 
     strncpy((char*)transmitBuffer,szTestMsg1,messageLength);
@@ -201,7 +201,7 @@ TEST(fullTransmiter,partialMessageReceived){
     const char *szTestMsg2="I'm a traveler of both time and space";
     unsigned char transmitBuffer[messageLength];
     unsigned char *pRawData;
-    CMessaging::Message_t msg;
+    Messaging::Message_t msg;
     unsigned rawDataSize;
 
     strncpy((char*)transmitBuffer,szTestMsg1,messageLength);
@@ -256,7 +256,7 @@ TEST(partialTransmitter,simpleTransmitTest){
     const char *szTestMsg="Hello world";
     unsigned char transmitBuffer[messageLength];
     unsigned char *pRawData;
-    CMessaging::Message_t msg;
+    Messaging::Message_t msg;
     unsigned rawDataSize;
 
     strncpy((char*)transmitBuffer,szTestMsg,messageLength);
@@ -295,7 +295,7 @@ TEST(partialTransmitter,withRetries){
     const char *szTestMsg="Hello world";
     unsigned char transmitBuffer[messageLength];
     unsigned char *pRawData;
-    CMessaging::Message_t msg;
+    Messaging::Message_t msg;
     unsigned rawDataSize;
 
     strncpy((char*)transmitBuffer,szTestMsg,messageLength);

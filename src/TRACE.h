@@ -19,8 +19,13 @@
 #endif
 
 //useful definition
-#define MILLION (1000000L)
-#define BILLION (MILLION*1000)
+#ifndef MILLION
+# define MILLION 1000000L
+#endif
+
+#ifndef BILLION
+# define BILLION (1000*MILLION)
+#endif
 //power of two constants
 #define KILO (1024)
 #define MEG  (KILO*KILO)

@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <boost/log/trivial.hpp>
 
 using namespace std;
 
@@ -43,7 +44,7 @@ int CTcpMessaging::xmitMsg(const unsigned char *pBuffer, unsigned uLength){
 
     nResults=send(m_socket, pBuffer, uLength, 0);
     if(nResults <0){
-        PERROR1("send socket failed. Reason: %s\n ",strerror(errno));
+        BOOST_LOG_TRIVIAL(error) << "send socket failed. Reason: " << strerror(errno);
     }
 
     return nResults;
@@ -68,13 +69,13 @@ bool CTcpMessaging::connect(string sIpAddress, unsigned uPort) {
     serverAddr.sin_port = htons(m_uPortNumber);
 
     if(inet_pton( AF_INET,m_sIpAddress.c_str(),&serverAddr.sin_addr) <=0){
-        PTRACE1("Could not convert address %s to a network address\n",m_sIpAddress.c_str());
+        BOOST_LOG_TRIVIAL(error) << "Could not convert address %s to a network address " << m_sIpAddress;
         return false;
     }
 
     m_socket=socket(AF_INET,SOCK_STREAM,0);
     if(m_socket < 0){
-        PTRACE("Failed to create socket\n");
+        BOOST_LOG_TRIVIAL(error) <<  "Failed to create socket";
         return false;
     }
 
